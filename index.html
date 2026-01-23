@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>YouTube RSS Viewer</title>
+
+<style>
+:root {
+    --bg: #0f0f0f;
+    --bg2: #181818;
+    --bg3: #212121;
+    --text: #ffffff;
+    --sub: #aaaaaa;
+    --accent: #ff0000;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+#app {
+    display: flex;
+    height: 100vh;
+}
+
+/* PLAYER */
+#player {
+    flex: 1.6;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.player-wrapper {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.player-wrapper iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* PLAYER ACTIONS */
+.player-actions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.player-actions a {
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 18px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+/* FEED */
+#feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    border-left: 1px solid #222;
+}
+
+.video {
+    display: flex;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.video:hover {
+    background: var(--bg2);
+}
+
+.thumb {
+    width: 168px;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #333;
+}
+
+.title {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.meta {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--sub);
+}
+
+#loader {
+    padding: 30px;
+    text-align: center;
+    color: var(--sub);
+}
+</style>
+</head>
+
+<body>
+
+<div id="app">
+
+    <div id="player">
+        <div class="player-wrapper" id="playerWrapper"></div>
+
+        <div class="player-actions">
+            <a id="openYoutube" href="#" target="_blank" style="display:none">
+                Открыть на YouTube
+            </a>
+        </div>
+    </div>
+
+    <div id="feed">
+        <div id="loader">Загрузка видео…</div>
+    </div>
+
+</div>
+
+<script>
+const feeds = [
+  "https://www.youtube.com/feeds/videos.xml?channel_id=UC_x5XG1OV2P6uZZ5FSM9Ttw"
+];
+
+const proxies = [
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://cors.isomorphic-git.org/${url}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`
+];
+
+const feedEl = document.getElementById("feed");
+const loaderEl = document.getElementById("loader");
+const playerWrapper = document.getElementById("playerWrapper");
+const openBtn = document.getElementById("openYoutube");
+
+const videoMap = new Map();
+
+/* INIT */
+(async function init() {
+    for (const feed of feeds) {
+        const text = await fetchWithFallback(feed);
+        if (text) parseFeed(text);
+    }
+
+    const videos = [...videoMap.values()]
+        .sort((a, b) => b.date - a.date);
+
+    loaderEl.remove();
+
+    if (!videos.length) {
+        feedEl.innerHTML = "<div style='color:#aaa;padding:20px'>Видео не найдены</div>";
+        return;
+    }
+
+    videos.forEach(renderVideo);
+})();
+
+/* FETCH */
+async function fetchWithFallback(url) {
+    for (const proxy of proxies) {
+        try {
+            const res = await fetch(proxy(url), { cache: "no-store" });
+            const text = await res.text();
+            if (text.includes("<entry")) return text;
+        } catch (_) {}
+    }
+    return null;
+}
+
+/* PARSE */
+function parseFeed(text) {
+    const xml = new DOMParser().parseFromString(text, "text/xml");
+
+    xml.querySelectorAll("entry").forEach(e => {
+        const link = e.querySelector("link")?.getAttribute("href") || "";
+        const videoId = link.split("v=")[1];
+        if (!videoId || videoMap.has(videoId)) return;
+
+        videoMap.set(videoId, {
+            videoId,
+            title: e.querySelector("title")?.textContent || "",
+            channel: e.querySelector("author name")?.textContent || "",
+            date: new Date(e.querySelector("published")?.textContent)
+        });
+    });
+}
+
+/* FEED UI */
+function renderVideo(v) {
+    const div = document.createElement("div");
+    div.className = "video";
+
+    div.innerHTML = `
+        <img class="thumb" src="https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg">
+        <div>
+            <div class="title">${v.title}</div>
+            <div class="meta">
+                ${v.channel} • ${v.date.toLocaleDateString("ru-RU", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric"
+                })}
+            </div>
+        </div>
+    `;
+
+    div.onclick = () => loadVideo(v.videoId);
+    feedEl.appendChild(div);
+}
+
+/* PLAYER */
+function loadVideo(id) {
+    playerWrapper.innerHTML = `
+        <iframe
+            src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowfullscreen>
+        </iframe>
+    `;
+
+    openBtn.href = `https://www.youtube.com/watch?v=${id}`;
+    openBtn.style.display = "inline-block";
+}
+</script>
+
+</body>
+</html>
