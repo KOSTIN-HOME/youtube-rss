@@ -9,377 +9,239 @@
 
 <style>
 :root {
-    --bg: #0f0f0f;
-    --bg2: #181818;
-    --text: #ffffff;
-    --sub: #aaaaaa;
-    --accent: #ff0000;
+    --bg:#0f0f0f;
+    --bg2:#181818;
+    --text:#fff;
+    --sub:#aaa;
+    --accent:#ff0000;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+#app{display:flex;height:100vh}
+#player{flex:1.6;padding:20px;display:flex;flex-direction:column;gap:10px}
+.player-wrapper{width:100%;aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden}
+#videoInfo{font-size:14px;color:var(--sub);min-height:20px}
+#feedContainer{flex:1;display:flex;flex-direction:column;border-left:1px solid #222}
+#tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:var(--bg2);border-bottom:1px solid #222}
+.tab{padding:6px 12px;border-radius:8px;cursor:pointer;background:#222;color:var(--sub);font-size:14px;white-space:nowrap}
+.tab.active{background:var(--accent);color:#fff}
+.tab.loading::after{
+    content:"";display:inline-block;margin-left:6px;width:12px;height:12px;
+    border:2px solid var(--text);border-top-color:var(--accent);
+    border-radius:50%;animation:spin .8s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#retryFailed{
+    display:none;
+    margin:8px;
+    padding:6px 10px;
+    background:#222;
+    color:#fff;
+    border:1px solid #333;
+    border-radius:8px;
+    cursor:pointer;
 }
 
-* { box-sizing: border-box; }
-
-body {
-    margin: 0;
-    font-family: Roboto, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-}
-
-/* LAYOUT */
-#app {
-    display: flex;
-    height: 100vh;
-}
-
-#player {
-    flex: 1.6;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.player-wrapper {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-    border-radius: 14px;
-    overflow: hidden;
-}
-
-#videoInfo {
-    font-size: 14px;
-    color: var(--sub);
-    min-height: 20px;
-}
-
-/* FEED */
-#feedContainer {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    border-left: 1px solid #222;
-}
-
-#tabs {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    padding: 12px;
-    background: var(--bg2);
-    border-bottom: 1px solid #222;
-}
-
-.tab {
-    padding: 6px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    background: #222;
-    color: var(--sub);
-    font-size: 14px;
-    white-space: nowrap;
-    position: relative;
-}
-
-.tab.active {
-    background: var(--accent);
-    color: #fff;
-}
-
-/* Спиннер на загрузке */
-.tab.loading::after {
-    content: "";
-    display: inline-block;
-    margin-left: 6px;
-    width: 12px;
-    height: 12px;
-    border: 2px solid var(--text);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-#feed {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.video {
-    display: flex;
-    gap: 12px;
-    padding: 10px;
-    border-radius: 12px;
-    cursor: pointer;
-    background: var(--bg2);
-    transition: background 0.2s;
-}
-
-.video:hover {
-    background: #333;
-}
-
-.thumb {
-    width: 168px;
-    aspect-ratio: 16 / 9;
-    border-radius: 10px;
-    object-fit: cover;
-}
-
-.title {
-    font-size: 15px;
-    font-weight: 500;
-}
-
-.meta {
-    font-size: 13px;
-    color: var(--sub);
-    margin-top: 6px;
-}
-
-#loader {
-    padding: 20px;
-    color: var(--sub);
-    font-size: 14px;
-}
-
-/* ================= MOBILE ================= */
-
-@media (max-width: 900px) {
-    #app {
-        flex-direction: column;
-        height: auto;
-    }
-
-    #player {
-        padding: 12px;
-    }
-
-    .player-wrapper {
-        border-radius: 0;
-    }
-
-    #feedContainer {
-        border-left: none;
-        border-top: 1px solid #222;
-    }
-
-    .thumb {
-        width: 120px;
-    }
-}
+#feed{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.video{display:flex;gap:12px;padding:10px;border-radius:12px;cursor:pointer;background:var(--bg2)}
+.video:hover{background:#333}
+.thumb{width:168px;aspect-ratio:16/9;border-radius:10px;object-fit:cover}
+.title{font-size:15px;font-weight:500}
+.meta{font-size:13px;color:var(--sub);margin-top:6px}
+#loader{padding:20px;color:var(--sub)}
 </style>
 </head>
 
 <body>
 
 <div id="app">
+<div id="player">
+    <div id="videoInfo">Выберите видео</div>
+    <div class="player-wrapper" id="playerWrapper"></div>
+</div>
 
-    <div id="player">
-        <div id="videoInfo">Выберите видео</div>
-        <div class="player-wrapper" id="playerWrapper"></div>
-    </div>
-
-    <div id="feedContainer">
-        <div id="tabs"></div>
-        <div id="feed">
-            <div id="loader">Подготовка…</div>
-        </div>
-    </div>
-
+<div id="feedContainer">
+    <div id="tabs"></div>
+    <button id="retryFailed">⟳ Перезагрузить незагруженные</button>
+    <div id="feed"><div id="loader">Подготовка…</div></div>
+</div>
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-
-const feeds = [
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ", name: "Kuplinov ► Play" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCdKuE7a2QZeHPhDntXVZ91w", name: "DeadP47" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ", name: "Rozetked" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCXvyU8oMwCmGOYYutgNwyiw", name: "Acting" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC_gKMJFeCf1bKzZr_fICkig", name: "TheDRZJ" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC2q4mHrzoR48mwSuAYtVPtQ", name: "Александр Панчин" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCgtAOyEQdAyjvm9ATCi_Aig", name: "AlexGyver" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC76KmU4gIQqVHZ3ESydElHA", name: "Черный Кумыс" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC-_iyv1-5NM5wmypELjz8Aw", name: "Максим Кузнецов" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC6uFoHcr_EEK6DgCS-LeTNA", name: "PRO Hi-Tech" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCHPwlUYfCZ1RzYNyZKvaRHw", name: "Portal News" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCI_OoGWEN7HHet11pNTFdJg", name: "Илья Геймер" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCsvsmFQ8eFRx5v6cdmuYBsg", name: "Restart" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCyPvbjMjnQBn-6FcxxovSHA", name: "Луцай" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCkrzQDo3U2GmHqqMjqYOuvA", name: "LoVisH Gaming Experience" }
+const feeds=[/* НЕ МЕНЯЛ */ 
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ",name:"Kuplinov ► Play"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCdKuE7a2QZeHPhDntXVZ91w",name:"DeadP47"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ",name:"Rozetked"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCXvyU8oMwCmGOYYutgNwyiw",name:"Acting"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC_gKMJFeCf1bKzZr_fICkig",name:"TheDRZJ"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC2q4mHrzoR48mwSuAYtVPtQ",name:"Александр Панчин"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCgtAOyEQdAyjvm9ATCi_Aig",name:"AlexGyver"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC76KmU4gIQqVHZ3ESydElHA",name:"Черный Кумыс"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC-_iyv1-5NM5wmypELjz8Aw",name:"Максим Кузнецов"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC6uFoHcr_EEK6DgCS-LeTNA",name:"PRO Hi-Tech"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCHPwlUYfCZ1RzYNyZKvaRHw",name:"Portal News"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCI_OoGWEN7HHet11pNTFdJg",name:"Илья Геймер"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCsvsmFQ8eFRx5v6cdmuYBsg",name:"Restart"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCyPvbjMjnQBn-6FcxxovSHA",name:"Луцай"},
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCkrzQDo3U2GmHqqMjqYOuvA",name:"LoVisH Gaming Experience"}
 ];
 
-const proxy = url =>
-  `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+const proxy=u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
 
-const feedEl = document.getElementById("feed");
-const loaderEl = document.getElementById("loader");
-const playerWrapper = document.getElementById("playerWrapper");
-const tabsEl = document.getElementById("tabs");
-const videoInfoEl = document.getElementById("videoInfo");
+const tabsEl=document.getElementById("tabs");
+const retryBtn=document.getElementById("retryFailed");
+const feedEl=document.getElementById("feed");
+const loaderEl=document.getElementById("loader");
+const playerWrapper=document.getElementById("playerWrapper");
+const videoInfoEl=document.getElementById("videoInfo");
 
-const videoMap = new Map();
-let currentTab = "Все видео";
-const maxRetries = 2;
+const videoMap=new Map();
+const channelStatus=new Map();
+
+let currentTab="Все видео";
+const maxRetries=2;
 
 init();
 
-async function init() {
+function init(){
     renderTabs();
-    loaderEl.textContent = `Загрузка каналов…`;
-
-    for (const feed of feeds) {
-        loadFeedWithRetries(feed, maxRetries);
-    }
+    feeds.forEach(f=>channelStatus.set(f.name,"loading"));
+    feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
 }
 
-async function loadFeedWithRetries(feed, retriesLeft) {
-    const tabEl = document.querySelector(`.tab[data-channel="${feed.name}"]`);
-    tabEl.classList.add("loading");
+async function loadFeedWithRetries(feed,retries){
+    const tab=document.querySelector(`.tab[data-channel="${feed.name}"]`);
+    tab.classList.add("loading");
 
-    try {
-        const res = await fetch(proxy(feed.url), { cache: "no-store" });
-        const text = await res.text();
-        const added = parseFeed(text, feed.name);
-
-        if (added === 0) {
-            videoMap.set(`__empty__${feed.name}`, {
-                id: null,
-                title: "Видео не найдено",
-                channel: feed.name,
-                date: new Date(0),
-                empty: true
-            });
-        }
-
-        renderVideosSorted();
-    } catch (e) {
-        console.warn(`Ошибка загрузки канала ${feed.name}`, e);
-        if (retriesLeft > 0) {
-            setTimeout(() => loadFeedWithRetries(feed, retriesLeft - 1), 2000);
+    try{
+        const r=await fetch(proxy(feed.url));
+        const t=await r.text();
+        parseFeed(t,feed.name);
+        channelStatus.set(feed.name,"loaded");
+    }catch{
+        if(retries>0){
+            setTimeout(()=>loadFeedWithRetries(feed,retries-1),1500);
             return;
-        } else {
-            videoMap.set(`__failed__${feed.name}`, {
-                id: null,
-                title: "Не удалось загрузить канал",
-                channel: feed.name,
-                date: new Date(0),
-                empty: true
-            });
         }
-    } finally {
-        tabEl.classList.remove("loading");
+        channelStatus.set(feed.name,"failed");
+        videoMap.set(`__fail_${feed.name}`,{
+            empty:true,
+            title:"Не удалось загрузить канал",
+            channel:feed.name,
+            date:new Date(0)
+        });
+    }finally{
+        tab.classList.remove("loading");
+        finalizeTabs();
         renderVideosSorted();
     }
 }
 
-function parseFeed(text, channelName) {
-    const xml = new DOMParser().parseFromString(text, "text/xml");
-    let count = 0;
+function finalizeTabs(){
+    const all=tabsEl.querySelector('[data-channel="Все видео"]');
+    const tabs=[...tabsEl.querySelectorAll(".tab")].filter(t=>t!==all);
 
-    xml.querySelectorAll("entry").forEach(e => {
-        let id = e.querySelector("yt\\:videoId")?.textContent;
+    tabs.sort((a,b)=>{
+        const sa=channelStatus.get(a.dataset.channel);
+        const sb=channelStatus.get(b.dataset.channel);
+        if(sa===sb) return 0;
+        if(sa==="loaded") return -1;
+        if(sb==="loaded") return 1;
+        return sa==="failed"?1:-1;
+    });
 
-        if (!id) {
-            const link = e.querySelector("link")?.getAttribute("href") || "";
-            const match = link.match(/v=([^&]+)/);
-            if (match) id = match[1];
+    tabsEl.innerHTML="";
+    tabsEl.appendChild(all);
+    tabs.forEach(t=>{
+        const n=t.dataset.channel;
+        t.textContent=n+(channelStatus.get(n)==="failed"?" ❌":"");
+        tabsEl.appendChild(t);
+    });
+
+    retryBtn.style.display=[...channelStatus.values()].includes("failed")?"block":"none";
+}
+
+retryBtn.onclick=()=>{
+    feeds.forEach(f=>{
+        if(channelStatus.get(f.name)==="failed"){
+            channelStatus.set(f.name,"loading");
+            loadFeedWithRetries(f,maxRetries);
         }
-
-        if (!id || videoMap.has(id)) return;
-
-        videoMap.set(id, {
-            id,
-            title: e.querySelector("title")?.textContent || "",
-            channel: channelName,
-            date: new Date(e.querySelector("published")?.textContent)
-        });
-        count++;
     });
+    retryBtn.style.display="none";
+};
 
-    return count;
+function renderTabs(){
+    tabsEl.innerHTML="";
+    tabsEl.appendChild(createTab("Все видео"));
+    feeds.forEach(f=>tabsEl.appendChild(createTab(f.name)));
 }
 
-function renderTabs() {
-    tabsEl.innerHTML = "";
-
-    const allTab = createTab("Все видео");
-    tabsEl.appendChild(allTab);
-
-    feeds.forEach(f => {
-        const tab = createTab(f.name);
-        tabsEl.appendChild(tab);
-    });
-}
-
-function createTab(name) {
-    const el = document.createElement("div");
-    el.className = "tab" + (name === currentTab ? " active" : "");
-    el.dataset.channel = name;
-    el.innerHTML = name;
-    el.onclick = () => {
-        currentTab = name;
-        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-        el.classList.add("active");
+function createTab(name){
+    const t=document.createElement("div");
+    t.className="tab"+(name===currentTab?" active":"");
+    t.dataset.channel=name;
+    t.textContent=name;
+    t.onclick=()=>{
+        currentTab=name;
+        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+        t.classList.add("active");
         renderVideosSorted();
     };
-    return el;
+    return t;
 }
 
-function renderVideosSorted() {
-    feedEl.innerHTML = "";
-    loaderEl.textContent = "";
+function parseFeed(text,channel){
+    const xml=new DOMParser().parseFromString(text,"text/xml");
+    xml.querySelectorAll("entry").forEach(e=>{
+        let id=e.querySelector("yt\\:videoId")?.textContent;
+        if(!id){
+            const link=e.querySelector("link")?.getAttribute("href")||"";
+            const m=link.match(/v=([^&]+)/);
+            if(m) id=m[1];
+        }
+        if(!id||videoMap.has(id)) return;
 
-    const videos = [...videoMap.values()]
-        .filter(v => currentTab === "Все видео" || v.channel === currentTab)
-        .sort((a, b) => b.date - a.date);
-
-    videos.forEach(renderVideo);
+        videoMap.set(id,{
+            id,
+            title:e.querySelector("title")?.textContent||"",
+            channel,
+            date:new Date(e.querySelector("published")?.textContent)
+        });
+    });
 }
 
-function renderVideo(v) {
-    const div = document.createElement("div");
-    div.className = "video";
-
-    if (v.empty) {
-        div.innerHTML = `
-            <div style="flex:1;color:#ff5555;">⚠ ${v.title} (${v.channel})</div>
-        `;
-    } else {
-        div.innerHTML = `
-            <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg" 
-                 onerror="this.src='https://via.placeholder.com/168x94/222/fff?text=Нет+обложки'">
-            <div>
-                <div class="title">${v.title}</div>
-                <div class="meta">${v.channel} • ${v.date.toLocaleDateString("ru-RU")}</div>
-            </div>
-        `;
-        div.onclick = () => loadVideo(v);
-    }
-
-    feedEl.appendChild(div);
+function renderVideosSorted(){
+    feedEl.innerHTML="";
+    loaderEl.textContent="";
+    [...videoMap.values()]
+        .filter(v=>currentTab==="Все видео"||v.channel===currentTab)
+        .sort((a,b)=>b.date-a.date)
+        .forEach(v=>{
+            const d=document.createElement("div");
+            d.className="video";
+            if(v.empty){
+                d.innerHTML=`<div style="color:#f55">${v.title} (${v.channel})</div>`;
+            }else{
+                d.innerHTML=`
+                <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+                <div>
+                    <div class="title">${v.title}</div>
+                    <div class="meta">${v.channel}</div>
+                </div>`;
+                d.onclick=()=>loadVideo(v);
+            }
+            feedEl.appendChild(d);
+        });
 }
 
-function loadVideo(v) {
-    playerWrapper.innerHTML = `
-        <iframe
-            src="https://www.youtube.com/embed/${v.id}?autoplay=1&rel=0"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            allowfullscreen
-            style="width:100%;height:100%;border:none">
-        </iframe>
-    `;
-    videoInfoEl.textContent = `${v.title} — ${v.channel}`;
+function loadVideo(v){
+    playerWrapper.innerHTML=`
+    <iframe src="https://www.youtube.com/embed/${v.id}?autoplay=1"
+    allow="autoplay" allowfullscreen style="width:100%;height:100%;border:none"></iframe>`;
+    videoInfoEl.textContent=`${v.title} — ${v.channel}`;
 }
 </script>
-
 </body>
 </html>
