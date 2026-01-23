@@ -78,11 +78,29 @@ body {
     color: var(--sub);
     font-size: 14px;
     white-space: nowrap;
+    position: relative;
 }
 
 .tab.active {
     background: var(--accent);
     color: #fff;
+}
+
+/* Спиннер на загрузке */
+.tab.loading::after {
+    content: "";
+    display: inline-block;
+    margin-left: 6px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--text);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 #feed {
@@ -165,8 +183,8 @@ body {
 <div id="app">
 
     <div id="player">
-        <div class="player-wrapper" id="playerWrapper"></div>
         <div id="videoInfo">Выберите видео</div>
+        <div class="player-wrapper" id="playerWrapper"></div>
     </div>
 
     <div id="feedContainer">
@@ -182,21 +200,21 @@ body {
 /* ================= CONFIG ================= */
 
 const feeds = [
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ", name: "Kuplinov ► Play" },
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCdKuE7a2QZeHPhDntXVZ91w", name: "DeadP47" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ", name: "Kuplinov ► Play" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCdKuE7a2QZeHPhDntXVZ91w", name: "DeadP47" },
   { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ", name: "Rozetked" },
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCXvyU8oMwCmGOYYutgNwyiw", name: "Acting" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCXvyU8oMwCmGOYYutgNwyiw", name: "Acting" },
   { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC_gKMJFeCf1bKzZr_fICkig", name: "TheDRZJ" },
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC2q4mHrzoR48mwSuAYtVPtQ", name: "Александр Панчин" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC2q4mHrzoR48mwSuAYtVPtQ", name: "Александр Панчин" },
   { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCgtAOyEQdAyjvm9ATCi_Aig", name: "AlexGyver" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC76KmU4gIQqVHZ3ESydElHA", name: "Черный Кумыс" }
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC-_iyv1-5NM5wmypELjz8Aw", name: "Максим Кузнецов" },
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC6uFoHcr_EEK6DgCS-LeTNA", name: "PRO Hi-Tech" },
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCHPwlUYfCZ1RzYNyZKvaRHw", name: "Portal News" },
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCI_OoGWEN7HHet11pNTFdJg", name: "Илья Геймер" },
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCsvsmFQ8eFRx5v6cdmuYBsg", name: "Restart" },
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCyPvbjMjnQBn-6FcxxovSHA", name: "Луцай" },
-  //{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCkrzQDo3U2GmHqqMjqYOuvA", name: "LoVisH Gaming Experience" }
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC76KmU4gIQqVHZ3ESydElHA", name: "Черный Кумыс" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC-_iyv1-5NM5wmypELjz8Aw", name: "Максим Кузнецов" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC6uFoHcr_EEK6DgCS-LeTNA", name: "PRO Hi-Tech" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCHPwlUYfCZ1RzYNyZKvaRHw", name: "Portal News" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCI_OoGWEN7HHet11pNTFdJg", name: "Илья Геймер" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCsvsmFQ8eFRx5v6cdmuYBsg", name: "Restart" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCyPvbjMjnQBn-6FcxxovSHA", name: "Луцай" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCkrzQDo3U2GmHqqMjqYOuvA", name: "LoVisH Gaming Experience" }
 ];
 
 const proxy = url =>
@@ -210,30 +228,62 @@ const videoInfoEl = document.getElementById("videoInfo");
 
 const videoMap = new Map();
 let currentTab = "Все видео";
+const maxRetries = 2;
 
 init();
 
 async function init() {
-    loaderEl.textContent = `Загружаем каналы (0 / ${feeds.length})…`;
-
-    await Promise.all(feeds.map(f => loadFeed(f)));
-
     renderTabs();
-    renderFinal();
+    loaderEl.textContent = `Загрузка каналов…`;
+
+    for (const feed of feeds) {
+        loadFeedWithRetries(feed, maxRetries);
+    }
 }
 
-async function loadFeed(feed) {
+async function loadFeedWithRetries(feed, retriesLeft) {
+    const tabEl = document.querySelector(`.tab[data-channel="${feed.name}"]`);
+    tabEl.classList.add("loading");
+
     try {
         const res = await fetch(proxy(feed.url), { cache: "no-store" });
         const text = await res.text();
-        parseFeed(text, feed.name);
+        const added = parseFeed(text, feed.name);
+
+        if (added === 0) {
+            videoMap.set(`__empty__${feed.name}`, {
+                id: null,
+                title: "Видео не найдено",
+                channel: feed.name,
+                date: new Date(0),
+                empty: true
+            });
+        }
+
+        renderVideosSorted();
     } catch (e) {
-        console.warn("Ошибка загрузки:", feed.url);
+        console.warn(`Ошибка загрузки канала ${feed.name}`, e);
+        if (retriesLeft > 0) {
+            setTimeout(() => loadFeedWithRetries(feed, retriesLeft - 1), 2000);
+            return;
+        } else {
+            videoMap.set(`__failed__${feed.name}`, {
+                id: null,
+                title: "Не удалось загрузить канал",
+                channel: feed.name,
+                date: new Date(0),
+                empty: true
+            });
+        }
+    } finally {
+        tabEl.classList.remove("loading");
+        renderVideosSorted();
     }
 }
 
 function parseFeed(text, channelName) {
     const xml = new DOMParser().parseFromString(text, "text/xml");
+    let count = 0;
 
     xml.querySelectorAll("entry").forEach(e => {
         let id = e.querySelector("yt\\:videoId")?.textContent;
@@ -252,7 +302,10 @@ function parseFeed(text, channelName) {
             channel: channelName,
             date: new Date(e.querySelector("published")?.textContent)
         });
+        count++;
     });
+
+    return count;
 }
 
 function renderTabs() {
@@ -270,17 +323,18 @@ function renderTabs() {
 function createTab(name) {
     const el = document.createElement("div");
     el.className = "tab" + (name === currentTab ? " active" : "");
-    el.textContent = name;
+    el.dataset.channel = name;
+    el.innerHTML = name;
     el.onclick = () => {
         currentTab = name;
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         el.classList.add("active");
-        renderFinal();
+        renderVideosSorted();
     };
     return el;
 }
 
-function renderFinal() {
+function renderVideosSorted() {
     feedEl.innerHTML = "";
     loaderEl.textContent = "";
 
@@ -295,15 +349,22 @@ function renderVideo(v) {
     const div = document.createElement("div");
     div.className = "video";
 
-    div.innerHTML = `
-        <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg" onerror="this.src='https://via.placeholder.com/168x94/222/fff?text=Нет+обложки'">
-        <div>
-            <div class="title">${v.title}</div>
-            <div class="meta">${v.channel} • ${v.date.toLocaleDateString("ru-RU")}</div>
-        </div>
-    `;
+    if (v.empty) {
+        div.innerHTML = `
+            <div style="flex:1;color:#ff5555;">⚠ ${v.title} (${v.channel})</div>
+        `;
+    } else {
+        div.innerHTML = `
+            <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg" 
+                 onerror="this.src='https://via.placeholder.com/168x94/222/fff?text=Нет+обложки'">
+            <div>
+                <div class="title">${v.title}</div>
+                <div class="meta">${v.channel} • ${v.date.toLocaleDateString("ru-RU")}</div>
+            </div>
+        `;
+        div.onclick = () => loadVideo(v);
+    }
 
-    div.onclick = () => loadVideo(v);
     feedEl.appendChild(div);
 }
 
@@ -322,4 +383,3 @@ function loadVideo(v) {
 
 </body>
 </html>
-
