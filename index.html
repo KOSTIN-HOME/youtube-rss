@@ -51,33 +51,43 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 .title{font-size:15px;font-weight:500}
 .meta{font-size:13px;color:var(--sub);margin-top:6px}
 #loader{padding:20px;color:var(--sub)}
+
 @media (max-width: 768px) {
-    #app {
-        flex-direction: column;
-        height: auto;
-    }
-
-    #player {
-        flex: none;
-        padding: 10px;
-    }
-
-    #feedContainer {
-        flex: none;
-        border-left: none;
-        border-top: 1px solid #222;
-        height: auto;
-    }
-
-    #feed {
-        max-height: none;
-        overflow-y: visible;
-    }
+    #app {flex-direction: column;height:auto}
+    #player {flex:none;padding:10px}
+    #feedContainer {flex:none;border-left:none;border-top:1px solid #222}
+    #feed {overflow-y:visible}
 }
 </style>
 </head>
 
 <body>
+
+<!-- Пункт 1: защита паролем -->
+<div id="lockScreen" style="
+    position:fixed;
+    inset:0;
+    background:#0f0f0f;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+">
+    <div style="background:#181818;padding:20px;border-radius:12px;min-width:260px">
+        <div style="margin-bottom:10px;color:#aaa">Введите пароль</div>
+        <input id="passwordInput" type="password" style="
+            width:100%;
+            padding:8px;
+            border-radius:8px;
+            border:1px solid #333;
+            background:#000;
+            color:#fff;
+        ">
+        <div id="passwordError" style="color:#f55;font-size:13px;margin-top:8px;display:none">
+            Неверный пароль
+        </div>
+    </div>
+</div>
 
 <div id="app">
 <div id="player">
@@ -93,7 +103,7 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 </div>
 
 <script>
-const feeds=[/* НЕ МЕНЯЛ */ 
+const feeds=[
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ",name:"DeadP47"},
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCdKuE7a2QZeHPhDntXVZ91w",name:"Kuplinov"},
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCDF_NIAEkcAUvzxe1DUzaQA",name:"Rozetked"},
@@ -109,25 +119,26 @@ const feeds=[/* НЕ МЕНЯЛ */
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCsvsmFQ8eFRx5v6cdmuYBsg",name:"Restart"},
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCyPvbjMjnQBn-6FcxxovSHA",name:"Луцай"},
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCkrzQDo3U2GmHqqMjqYOuvA",name:"LoVisH Gaming Experience"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCOw9Jzw3p4XzL5Ub5WglJRQ",name:"Алексей Макаренков"}   
+{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCOw9Jzw3p4XzL5Ub5WglJRQ",name:"Алексей Макаренков"}
 ];
 
-const proxies = [
-    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    u => `https://cors.isomorphic-git.org/${u}`,
-    u => `https://thingproxy.freeboard.io/fetch/${u}`
+const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
+
+const proxies=[
+u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+u=>`https://cors.isomorphic-git.org/${u}`,
+u=>`https://thingproxy.freeboard.io/fetch/${u}`
 ];
 
-async function proxyFetch(url) {
-    for (const p of proxies) {
-        try {
-            const r = await fetch(p(url), { cache: "no-store" });
-            if (r.ok) return r;
-        } catch {}
+async function proxyFetch(url){
+    for(const p of proxies){
+        try{
+            const r=await fetch(p(url),{cache:"no-store"});
+            if(r.ok) return r;
+        }catch{}
     }
-    throw new Error("All proxies failed");
+    throw new Error();
 }
-
 
 const tabsEl=document.getElementById("tabs");
 const retryBtn=document.getElementById("retryFailed");
@@ -151,6 +162,8 @@ function init(){
 }
 
 async function loadFeedWithRetries(feed,retries){
+    videoMap.delete(`__fail_${feed.name}`);
+
     const tab=document.querySelector(`.tab[data-channel="${feed.name}"]`);
     tab.classList.add("loading");
 
@@ -183,12 +196,18 @@ function finalizeTabs(){
     const tabs=[...tabsEl.querySelectorAll(".tab")].filter(t=>t!==all);
 
     tabs.sort((a,b)=>{
-        const sa=channelStatus.get(a.dataset.channel);
-        const sb=channelStatus.get(b.dataset.channel);
-        if(sa===sb) return 0;
-        if(sa==="loaded") return -1;
-        if(sb==="loaded") return 1;
-        return sa==="failed"?1:-1;
+        const ca=a.dataset.channel;
+        const cb=b.dataset.channel;
+        const sa=channelStatus.get(ca);
+        const sb=channelStatus.get(cb);
+
+        if(sa!==sb){
+            if(sa==="loaded") return -1;
+            if(sb==="loaded") return 1;
+            if(sa==="failed") return 1;
+            if(sb==="failed") return -1;
+        }
+        return channelOrder.get(ca)-channelOrder.get(cb);
     });
 
     tabsEl.innerHTML="";
@@ -268,7 +287,9 @@ function renderVideosSorted(){
                 <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
                 <div>
                     <div class="title">${v.title}</div>
-                    <div class="meta">${v.channel}</div>
+                    <div class="meta">
+                        ${v.channel} • ${v.date.toLocaleDateString("ru-RU")}
+                    </div>
                 </div>`;
                 d.onclick=()=>loadVideo(v);
             }
@@ -282,13 +303,22 @@ function loadVideo(v){
     allow="autoplay" allowfullscreen style="width:100%;height:100%;border:none"></iframe>`;
     videoInfoEl.textContent=`${v.title} — ${v.channel}`;
 }
+
+/* пароль */
+const lockScreen=document.getElementById("lockScreen");
+const passwordInput=document.getElementById("passwordInput");
+const passwordError=document.getElementById("passwordError");
+
+passwordInput.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+        if(passwordInput.value==="672318"){
+            lockScreen.remove();
+        }else{
+            passwordError.style.display="block";
+            passwordInput.value="";
+        }
+    }
+});
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
