@@ -34,7 +34,6 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 @keyframes spin{to{transform:rotate(360deg)}}
 
 #retryFailed{
-    display:none;
     margin:8px;
     padding:6px 10px;
     background:#222;
@@ -236,8 +235,6 @@ function finalizeTabs(){
 
         tabsEl.appendChild(t);
     });
-
-    retryBtn.style.display = "block";
 }
 
 retryBtn.onclick=()=>{
@@ -356,6 +353,7 @@ passwordInput.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
