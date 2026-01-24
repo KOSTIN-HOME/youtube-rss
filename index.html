@@ -90,9 +90,6 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
             background:#000;
             color:#fff;
         ">
-        <div id="passwordError" style="color:#f55;font-size:13px;margin-top:8px;display:none">
-            Неверный пароль
-        </div>
     </div>
 </div>
 
@@ -128,12 +125,20 @@ const feeds=[
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCOw9Jzw3p4XzL5Ub5WglJRQ",name:"Алексей Макаренков"}
 ];
 
+const correctPassword = "672318";
 const lockScreen = document.getElementById("lockScreen");
 const passwordInput = document.getElementById("passwordInput");
 const passwordError = document.getElementById("passwordError");
 
+passwordInput.addEventListener("input", () => {
+    if (passwordInput.value === correctPassword) {
+        lockScreen.style.display = "none"; // правильный пароль, сразу вход
+    } else {
+        passwordError.style.display = "block"; // неправильный пароль
+    }
+});
+
 const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
-const correctPassword = "672318";
     
 const proxies=[
 u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -167,7 +172,6 @@ const maxRetries=2;
 init();
 
 function init(){
-    // Восстановление видео из localStorage
     const saved = localStorage.getItem("ytVideos");
     if(saved){
         JSON.parse(saved).forEach(v=>{
@@ -180,26 +184,20 @@ function init(){
     feeds.forEach(f=>channelStatus.set(f.name,"loading"));
     feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
 
-    // Запуск проверки новых видео каждые 10 минут
     setInterval(checkNewVideos,10*60*1000);
 }
 
 async function loadFeedWithRetries(feed) {
     videoMap.delete(`__fail_${feed.name}`);
-
-    // статус обновления
     channelStatus.set(feed.name, "loading");
-    finalizeTabs(); // обновляем вкладку с миганием
+    finalizeTabs();
 
     try {
         const r = await proxyFetch(feed.url);
         const t = await r.text();
         parseFeed(t, feed.name);
-
-        // успешно загружено
         channelStatus.set(feed.name, "loaded");
     } catch (err) {
-        // повтор через 10 секунд, статус остаётся "loading"
         setTimeout(() => loadFeedWithRetries(feed), 10000);
         return;
     } finally {
@@ -207,18 +205,6 @@ async function loadFeedWithRetries(feed) {
         renderVideosSorted();
     }
 }
-
-// Проверка новых видео каждые 10 минут
-function checkNewVideos(){
-    feeds.forEach(f => loadFeedWithRetries(f));
-}
-
-
-// Проверка новых видео каждые 10 минут
-function checkNewVideos(){
-    feeds.forEach(f => loadFeedWithRetries(f));
-}
-
 
 function checkNewVideos(){
     feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
@@ -228,7 +214,6 @@ function finalizeTabs(){
     const all = tabsEl.querySelector('[data-channel="Все видео"]');
     const tabs = [...tabsEl.querySelectorAll(".tab")].filter(t => t !== all);
 
-    // порядок как в feeds
     tabs.sort((a,b) => channelOrder.get(a.dataset.channel) - channelOrder.get(b.dataset.channel));
 
     tabsEl.innerHTML = "";
@@ -240,21 +225,16 @@ function finalizeTabs(){
 
         t.classList.remove("updating");
         if(status === "loading"){
-            // мигающий зеленый при обновлении
             t.classList.add("updating");
         } else if(status === "loaded") {
-            // цвет как у "Все видео"
             t.style.color = all.style.color || "#aaa"; 
         } else {
-            // дефолтный цвет, если вдруг
             t.style.color = "#aaa";
         }
 
         tabsEl.appendChild(t);
     });
 }
-
-
 
 retryBtn.onclick=()=>{
     feeds.forEach(f=>{
@@ -305,22 +285,16 @@ function parseFeed(text,channel){
         videoMap.set(id,video);
     });
 
-    // Сохраняем все видео в localStorage после обработки канала
     localStorage.setItem("ytVideos",JSON.stringify([...videoMap.values()]));
 }
 
 function renderVideosSorted(){
-    feedEl.innerHTML=""; // список видео очищаем только перед рендером
+    feedEl.innerHTML="";
     let hasVideos = [...videoMap.values()]
         .filter(v=>currentTab==="Все видео"||v.channel===currentTab)
         .length > 0;
 
-    // Если видео есть, показываем ✅ и сообщение "Загружено"
-    if(hasVideos){
-        loaderEl.textContent = "✅ Видео загружены";
-    } else {
-        loaderEl.textContent = "Подготовка…";
-    }
+    loaderEl.textContent = hasVideos ? "✅ Видео загружены" : "Подготовка…";
 
     [...videoMap.values()]
         .filter(v=>currentTab==="Все видео"||v.channel===currentTab)
@@ -345,40 +319,12 @@ function renderVideosSorted(){
         });
 }
 
-
 function loadVideo(v){
     playerWrapper.innerHTML=`
     <iframe src="https://www.youtube.com/embed/${v.id}?playsinline=1"
     allow="autoplay" allowfullscreen style="width:100%;height:100%;border:none"></iframe>`;
     videoInfoEl.textContent=`${v.title} — ${v.channel}`;
 }
-
-/* пароль */
-const lockScreen=document.getElementById("lockScreen");
-const passwordInput=document.getElementById("passwordInput");
-const passwordError=document.getElementById("passwordError");
-
-passwordInput.addEventListener("input", () => {
-    if (passwordInput.value === correctPassword) {
-        lockScreen.style.display = "none"; // скрываем блокировку
-    } else {
-        passwordError.style.display = "none"; // скрываем сообщение об ошибке
-    }
-});
-
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
