@@ -262,13 +262,14 @@ function renderVideosSorted(){
 
 function loadVideo(v){
     playerWrapper.innerHTML=`
-    <iframe src="https://www.youtube.com/embed/${v.id}?autoplay=1"
+    <iframe src="https://www.youtube.com/embed/${v.id}?playsinline=1"
     allow="autoplay" allowfullscreen style="width:100%;height:100%;border:none"></iframe>`;
     videoInfoEl.textContent=`${v.title} — ${v.channel}`;
 }
 </script>
 </body>
 </html>
+
 
 
 
