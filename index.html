@@ -128,13 +128,10 @@ const feeds=[
 const correctPassword = "672318";
 const lockScreen = document.getElementById("lockScreen");
 const passwordInput = document.getElementById("passwordInput");
-const passwordError = document.getElementById("passwordError");
 
 passwordInput.addEventListener("input", () => {
     if (passwordInput.value === correctPassword) {
-        lockScreen.style.display = "none"; // правильный пароль, сразу вход
-    } else {
-        passwordError.style.display = "block"; // неправильный пароль
+        lockScreen.style.display = "none";
     }
 });
 
@@ -157,7 +154,6 @@ async function proxyFetch(url){
 }
 
 const tabsEl=document.getElementById("tabs");
-const retryBtn=document.getElementById("retryFailed");
 const feedEl=document.getElementById("feed");
 const loaderEl=document.getElementById("loader");
 const playerWrapper=document.getElementById("playerWrapper");
@@ -168,6 +164,11 @@ const channelStatus=new Map();
 
 let currentTab="Все видео";
 const maxRetries=2;
+
+// Для ленивой подгрузки
+let videosPerPage = 20;
+let videosLoaded = 0;
+let videosToRender = [];
 
 init();
 
@@ -188,7 +189,6 @@ function init(){
 }
 
 async function loadFeedWithRetries(feed) {
-    videoMap.delete(`__fail_${feed.name}`);
     channelStatus.set(feed.name, "loading");
     finalizeTabs();
 
@@ -226,8 +226,6 @@ function finalizeTabs(){
         t.classList.remove("updating");
         if(status === "loading"){
             t.classList.add("updating");
-        } else if(status === "loaded") {
-            t.style.color = all.style.color || "#aaa"; 
         } else {
             t.style.color = "#aaa";
         }
@@ -235,15 +233,6 @@ function finalizeTabs(){
         tabsEl.appendChild(t);
     });
 }
-
-retryBtn.onclick=()=>{
-    feeds.forEach(f=>{
-        if(channelStatus.get(f.name)==="failed"){
-            channelStatus.set(f.name,"loading");
-            loadFeedWithRetries(f,maxRetries);
-        }
-    });
-};
 
 function renderTabs(){
     tabsEl.innerHTML="";
@@ -288,36 +277,45 @@ function parseFeed(text,channel){
     localStorage.setItem("ytVideos",JSON.stringify([...videoMap.values()]));
 }
 
-function renderVideosSorted(){
-    feedEl.innerHTML="";
-    let hasVideos = [...videoMap.values()]
-        .filter(v=>currentTab==="Все видео"||v.channel===currentTab)
-        .length > 0;
+// Новая версия с ленивой подгрузкой
+function renderVideosSorted(reset = true) {
+    if (reset) {
+        feedEl.innerHTML = "";
+        videosLoaded = 0;
+        videosToRender = [...videoMap.values()]
+            .filter(v => currentTab === "Все видео" || v.channel === currentTab)
+            .sort((a, b) => b.date - a.date);
+    }
 
-    loaderEl.textContent = hasVideos ? "✅ Видео загружены" : "Подготовка…";
+    let slice = videosToRender.slice(videosLoaded, videosLoaded + videosPerPage);
+    slice.forEach(v => {
+        const d = document.createElement("div");
+        d.className = "video";
+        d.innerHTML = `
+            <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+            <div>
+                <div class="title">${v.title}</div>
+                <div class="meta">
+                    ${v.channel} • ${v.date.toLocaleDateString("ru-RU")}
+                </div>
+            </div>`;
+        d.onclick = () => loadVideo(v);
+        feedEl.appendChild(d);
+    });
 
-    [...videoMap.values()]
-        .filter(v=>currentTab==="Все видео"||v.channel===currentTab)
-        .sort((a,b)=>b.date-a.date)
-        .forEach(v=>{
-            const d=document.createElement("div");
-            d.className="video";
-            if(v.empty){
-                d.innerHTML=`<div style="color:#f55">${v.title} (${v.channel})</div>`;
-            }else{
-                d.innerHTML=`
-                <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
-                <div>
-                    <div class="title">${v.title}</div>
-                    <div class="meta">
-                        ${v.channel} • ${v.date.toLocaleDateString("ru-RU")}
-                    </div>
-                </div>`;
-                d.onclick=()=>loadVideo(v);
-            }
-            feedEl.appendChild(d);
-        });
+    videosLoaded += slice.length;
+
+    loaderEl.style.display = videosLoaded < videosToRender.length ? "block" : "none";
 }
+
+// Подгрузка при скролле
+feedEl.addEventListener("scroll", () => {
+    if (feedEl.scrollTop + feedEl.clientHeight >= feedEl.scrollHeight - 50) {
+        if (videosLoaded < videosToRender.length) {
+            renderVideosSorted(false);
+        }
+    }
+});
 
 function loadVideo(v){
     playerWrapper.innerHTML=`
