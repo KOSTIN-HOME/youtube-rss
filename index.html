@@ -299,8 +299,18 @@ function parseFeed(text,channel){
 }
 
 function renderVideosSorted(){
-    feedEl.innerHTML="";
-    loaderEl.textContent="";
+    feedEl.innerHTML=""; // список видео очищаем только перед рендером
+    let hasVideos = [...videoMap.values()]
+        .filter(v=>currentTab==="Все видео"||v.channel===currentTab)
+        .length > 0;
+
+    // Если видео есть, показываем ✅ и сообщение "Загружено"
+    if(hasVideos){
+        loaderEl.textContent = "✅ Видео загружены";
+    } else {
+        loaderEl.textContent = "Подготовка…";
+    }
+
     [...videoMap.values()]
         .filter(v=>currentTab==="Все видео"||v.channel===currentTab)
         .sort((a,b)=>b.date-a.date)
@@ -323,6 +333,7 @@ function renderVideosSorted(){
             feedEl.appendChild(d);
         });
 }
+
 
 function loadVideo(v){
     playerWrapper.innerHTML=`
@@ -349,3 +360,4 @@ passwordInput.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
