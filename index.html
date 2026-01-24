@@ -176,13 +176,14 @@ function init(){
 async function loadFeedWithRetries(feed,retries){
     videoMap.delete(`__fail_${feed.name}`);
 
-    const tab=document.querySelector(`.tab[data-channel="${feed.name}"]`);
-    tab.classList.add("loading");
+    // НЕ добавляем класс loading, просто ставим статус
+    channelStatus.set(feed.name,"loading");
+    finalizeTabs(); // сразу обновляем цвет вкладки
 
     try{
-        const r=await proxyFetch(feed.url);
-        const t=await r.text();
-        parseFeed(t,feed.name);
+        const r = await proxyFetch(feed.url);
+        const t = await r.text();
+        parseFeed(t, feed.name);
         channelStatus.set(feed.name,"loaded");
     }catch{
         if(retries>0){
@@ -197,6 +198,7 @@ async function loadFeedWithRetries(feed,retries){
             channel:feed.name,
             date:new Date(0)
         });
+
         // Повторная попытка в течение 1 минуты каждые 5 секунд
         let start = Date.now();
         const retryInterval = setInterval(()=>{
@@ -204,7 +206,6 @@ async function loadFeedWithRetries(feed,retries){
             loadFeedWithRetries(feed,maxRetries);
         },5000);
     }finally{
-        tab.classList.remove("loading");
         finalizeTabs();
         renderVideosSorted();
     }
@@ -218,30 +219,24 @@ function finalizeTabs(){
     const all = tabsEl.querySelector('[data-channel="Все видео"]');
     const tabs = [...tabsEl.querySelectorAll(".tab")].filter(t => t !== all);
 
-    // Сохраняем порядок как в feeds
-    tabs.sort((a,b)=>{
-        const ca=a.dataset.channel;
-        const cb=b.dataset.channel;
-        return channelOrder.get(ca) - channelOrder.get(cb);
-    });
+    // Фиксированный порядок как в feeds
+    tabs.sort((a,b)=>channelOrder.get(a.dataset.channel)-channelOrder.get(b.dataset.channel));
 
-    // Очищаем контейнер и добавляем вкладку "Все видео"
     tabsEl.innerHTML = "";
     tabsEl.appendChild(all);
 
-    // Обновляем цвет текста каждой вкладки в зависимости от статуса канала
     tabs.forEach(t => {
         const name = t.dataset.channel;
-        const status = channelStatus.get(name); // loading / loaded / failed
-        if(status === "loading") t.style.color = "#FFD54F";       // пастельно-жёлтый
-        else if(status === "loaded") t.style.color = "#8BC34A";   // пастельно-зелёный
-        else if(status === "failed") t.style.color = "#E57373";   // пастельно-красный
-        else t.style.color = "#aaa";                               // дефолтный
+        const status = channelStatus.get(name);
+        // Цвет вкладки вместо символов и крутящегося индикатора
+        if(status === "loading") t.style.color = "#FFD54F";     // пастельно-жёлтый
+        else if(status === "loaded") t.style.color = "#8BC34A"; // пастельно-зелёный
+        else if(status === "failed") t.style.color = "#E57373"; // пастельно-красный
+        else t.style.color = "#aaa";
 
         tabsEl.appendChild(t);
     });
 
-    // Кнопка перезагрузки видна только если есть failed
     retryBtn.style.display = [...channelStatus.values()].includes("failed") ? "block" : "none";
 }
 
@@ -361,6 +356,7 @@ passwordInput.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
