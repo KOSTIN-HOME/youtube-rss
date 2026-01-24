@@ -70,6 +70,7 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 
 <body>
 
+<!-- Пункт 1: защита паролем -->
 <div id="lockScreen" style="
     position:fixed;
     inset:0;
@@ -131,6 +132,7 @@ const passwordInput = document.getElementById("passwordInput");
 window.addEventListener("load", () => passwordInput.focus());
 
 passwordInput.addEventListener("blur", () => {
+    // Если экран блокировки ещё активен — возвращаем фокус
     if (lockScreen.style.display !== "none") {
         setTimeout(() => passwordInput.focus(), 0);
     }
@@ -154,24 +156,23 @@ passwordInput.addEventListener("input", async () => {
 const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
     
 const proxies=[
-  u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  u=>`https://cors.isomorphic-git.org/${u}`,
-  u=>`https://thingproxy.freeboard.io/fetch/${u}`
+u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+u=>`https://cors.isomorphic-git.org/${u}`,
+u=>`https://thingproxy.freeboard.io/fetch/${u}`
 ];
 
-// ===== Новый proxyFetch с fallback вместо Promise.any =====
 async function proxyFetch(url) {
-    for (let p of proxies) {
-        try {
-            const res = await fetch(p(url), { cache: "no-store" });
-            if (res.ok) return res;
-        } catch(err) {
-            // игнорируем и идем к следующему прокси
-            console.warn(`Proxy failed: ${p(url)}`);
-        }
-    }
-    throw new Error("All proxies failed for " + url);
+    const promises = proxies.map(p => 
+        fetch(p(url), { cache: "no-store" }).then(r => {
+            if (!r.ok) throw new Error();
+            return r;
+        })
+    );
+    
+    // Возвращает первый успешный fetch, остальные игнорируются
+    return Promise.any(promises);
 }
+
 
 const tabsEl=document.getElementById("tabs");
 const feedEl=document.getElementById("feed");
@@ -192,6 +193,8 @@ const channelStatus=new Map();
 
 let currentTab="Все видео";
 const maxRetries=2;
+
+// Для ленивой подгрузки
 let videosPerPage = 20;
 let videosLoaded = 0;
 let videosToRender = [];
@@ -224,7 +227,6 @@ async function loadFeedWithRetries(feed) {
         parseFeed(t, feed.name);
         channelStatus.set(feed.name, "loaded");
     } catch (err) {
-        console.error(`Failed to load feed ${feed.name}:`, err);
         setTimeout(() => loadFeedWithRetries(feed), 10000);
         return;
     } finally {
@@ -304,6 +306,7 @@ function parseFeed(text,channel){
     localStorage.setItem("ytVideos",JSON.stringify([...videoMap.values()]));
 }
 
+// Новая версия с ленивой подгрузкой
 function renderVideosSorted(reset = true) {
     if (reset) {
         feedEl.innerHTML = "";
@@ -334,6 +337,7 @@ function renderVideosSorted(reset = true) {
     loaderEl.style.display = videosLoaded < videosToRender.length ? "block" : "none";
 }
 
+// Подгрузка при скролле
 feedEl.addEventListener("scroll", () => {
     if (feedEl.scrollTop + feedEl.clientHeight >= feedEl.scrollHeight - 50) {
         if (videosLoaded < videosToRender.length) {
@@ -346,6 +350,7 @@ function loadVideo(v){
     playerIframe.src = `https://www.youtube.com/embed/${v.id}?playsinline=1&autoplay=1`;
     videoInfoEl.textContent = `${v.title} — ${v.channel}`;
 }
+
 </script>
 </body>
 </html>
