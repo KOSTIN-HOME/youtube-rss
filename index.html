@@ -50,6 +50,29 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 .title{font-size:15px;font-weight:500}
 .meta{font-size:13px;color:var(--sub);margin-top:6px}
 #loader{padding:20px;color:var(--sub)}
+@media (max-width: 768px) {
+    #app {
+        flex-direction: column;
+        height: auto;
+    }
+
+    #player {
+        flex: none;
+        padding: 10px;
+    }
+
+    #feedContainer {
+        flex: none;
+        border-left: none;
+        border-top: 1px solid #222;
+        height: auto;
+    }
+
+    #feed {
+        max-height: none;
+        overflow-y: visible;
+    }
+}
 </style>
 </head>
 
@@ -245,5 +268,6 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
