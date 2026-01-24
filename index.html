@@ -32,6 +32,14 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
     border-radius:50%;animation:spin .8s linear infinite
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blinkGreen {
+  0%, 100% { color: #8BC34A; opacity: 1; }
+  50% { color: #C5E1A5; opacity: 0.5; }
+}
+
+.tab.updating {
+  animation: blinkGreen 1s infinite;
+}
 
 #retryFailed{
     margin:8px;
@@ -172,43 +180,35 @@ function init(){
     setInterval(checkNewVideos,10*60*1000);
 }
 
-async function loadFeedWithRetries(feed,retries){
+async function loadFeedWithRetries(feed) {
     videoMap.delete(`__fail_${feed.name}`);
 
-    // НЕ добавляем класс loading, просто ставим статус
-    channelStatus.set(feed.name,"loading");
-    finalizeTabs(); // сразу обновляем цвет вкладки
+    // ставим статус "loading"
+    channelStatus.set(feed.name, "loading");
+    finalizeTabs(); // обновляем цвет/анимацию вкладки
 
-    try{
+    try {
         const r = await proxyFetch(feed.url);
         const t = await r.text();
         parseFeed(t, feed.name);
-        channelStatus.set(feed.name,"loaded");
-    }catch{
-        if(retries>0){
-            setTimeout(()=>loadFeedWithRetries(feed,retries-1),1500);
-            return;
-        }
-        // Канал помечен как failed
-        channelStatus.set(feed.name,"failed");
-        videoMap.set(`__fail_${feed.name}`,{
-            empty:true,
-            title:"Не удалось загрузить канал",
-            channel:feed.name,
-            date:new Date(0)
-        });
 
-        // Повторная попытка в течение 1 минуты каждые 5 секунд
-        let start = Date.now();
-        const retryInterval = setInterval(()=>{
-            if(Date.now() - start > 60000) return clearInterval(retryInterval);
-            loadFeedWithRetries(feed,maxRetries);
-        },5000);
-    }finally{
+        // успешно загружено
+        channelStatus.set(feed.name, "loaded");
+    } catch (err) {
+        // повторяем через 10 секунд, статус остаётся "loading"
+        setTimeout(() => loadFeedWithRetries(feed), 10000);
+        return;
+    } finally {
         finalizeTabs();
         renderVideosSorted();
     }
 }
+
+// Проверка новых видео каждые 10 минут
+function checkNewVideos(){
+    feeds.forEach(f => loadFeedWithRetries(f));
+}
+
 
 function checkNewVideos(){
     feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
@@ -218,8 +218,8 @@ function finalizeTabs(){
     const all = tabsEl.querySelector('[data-channel="Все видео"]');
     const tabs = [...tabsEl.querySelectorAll(".tab")].filter(t => t !== all);
 
-    // Фиксированный порядок как в feeds
-    tabs.sort((a,b)=>channelOrder.get(a.dataset.channel)-channelOrder.get(b.dataset.channel));
+    // порядок как в feeds
+    tabs.sort((a,b) => channelOrder.get(a.dataset.channel) - channelOrder.get(b.dataset.channel));
 
     tabsEl.innerHTML = "";
     tabsEl.appendChild(all);
@@ -227,15 +227,22 @@ function finalizeTabs(){
     tabs.forEach(t => {
         const name = t.dataset.channel;
         const status = channelStatus.get(name);
-        // Цвет вкладки вместо символов и крутящегося индикатора
-        if(status === "loading") t.style.color = "#FFD54F";     // пастельно-жёлтый
-        else if(status === "loaded") t.style.color = "#8BC34A"; // пастельно-зелёный
-        else if(status === "failed") t.style.color = "#E57373"; // пастельно-красный
-        else t.style.color = "#aaa";
+
+        t.classList.remove("updating");
+        if(status === "loading"){
+            // мигающий зеленый при обновлении
+            t.classList.add("updating");
+        } else if(status === "loaded") {
+            // обычный цвет текста
+            t.style.color = "#8BC34A"; // пастельно-зеленый
+        } else {
+            t.style.color = "#aaa"; // дефолт
+        }
 
         tabsEl.appendChild(t);
     });
 }
+
 
 retryBtn.onclick=()=>{
     feeds.forEach(f=>{
@@ -352,6 +359,7 @@ passwordInput.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
