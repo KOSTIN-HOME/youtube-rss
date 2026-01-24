@@ -129,6 +129,15 @@ const correctPassword = "672318";
 const lockScreen = document.getElementById("lockScreen");
 const passwordInput = document.getElementById("passwordInput");
 
+window.addEventListener("load", () => passwordInput.focus());
+
+passwordInput.addEventListener("blur", () => {
+    // Если экран блокировки ещё активен — возвращаем фокус
+    if (lockScreen.style.display !== "none") {
+        setTimeout(() => passwordInput.focus(), 0);
+    }
+});
+
 passwordInput.addEventListener("input", () => {
     if (passwordInput.value === correctPassword) {
         lockScreen.style.display = "none";
@@ -143,15 +152,18 @@ u=>`https://cors.isomorphic-git.org/${u}`,
 u=>`https://thingproxy.freeboard.io/fetch/${u}`
 ];
 
-async function proxyFetch(url){
-    for(const p of proxies){
-        try{
-            const r=await fetch(p(url),{cache:"no-store"});
-            if(r.ok) return r;
-        }catch{}
-    }
-    throw new Error();
+async function proxyFetch(url) {
+    const promises = proxies.map(p => 
+        fetch(p(url), { cache: "no-store" }).then(r => {
+            if (!r.ok) throw new Error();
+            return r;
+        })
+    );
+    
+    // Возвращает первый успешный fetch, остальные игнорируются
+    return Promise.any(promises);
 }
+
 
 const tabsEl=document.getElementById("tabs");
 const feedEl=document.getElementById("feed");
