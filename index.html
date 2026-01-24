@@ -353,19 +353,21 @@ const lockScreen=document.getElementById("lockScreen");
 const passwordInput=document.getElementById("passwordInput");
 const passwordError=document.getElementById("passwordError");
 
-passwordInput.addEventListener("keydown",e=>{
-    if(e.key==="Enter"){
-        if(passwordInput.value==="672318"){
-            lockScreen.remove();
-        }else{
-            passwordError.style.display="block";
-            passwordInput.value="";
+passwordInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+        if (passwordInput.value === "672318") {
+            lockScreen.style.display = "none"; // скрываем экран
+        } else {
+            passwordError.style.display = "block";
+            passwordInput.value = "";
         }
     }
 });
+
 </script>
 </body>
 </html>
+
 
 
 
