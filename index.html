@@ -68,13 +68,18 @@ if(/view-source|inspect|devtools/i.test(navigator.userAgent))document.body.inner
 const PASS_HASH="346058ad3f947af4bd7c1dbe70ed1c155eafc95d856c9e781b25e871f0b736e6"
 async function sha256(t){const b=new TextEncoder().encode(t);const h=await crypto.subtle.digest("SHA-256",b);return[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 
-document.getElementById("btn").onclick=async()=>{
-if(await sha256(document.getElementById("pwd").value)===PASS_HASH){
-document.getElementById("lock").remove()
-document.getElementById("app").style.display="flex"
-init()
-}else document.getElementById("err").style.display="block"
-}
+document.getElementById("btn").onclick = async () => {
+    const v = document.getElementById("pwd").value.trim();
+    const h = await sha256(v);
+    if(h === PASS_HASH){
+        document.getElementById("lock").remove();
+        document.getElementById("app").style.display = "flex";
+        init();
+    }else{
+        document.getElementById("err").style.display = "block";
+    }
+};
+
 
 const feeds=[
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ",name:"DeadP47"},
@@ -214,3 +219,4 @@ videoInfoEl.textContent=`${v.title} — ${v.channel}`
 </script>
 </body>
 </html>
+
