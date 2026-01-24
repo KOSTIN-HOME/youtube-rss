@@ -111,7 +111,22 @@ const feeds=[/* НЕ МЕНЯЛ */
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCkrzQDo3U2GmHqqMjqYOuvA",name:"LoVisH Gaming Experience"}
 ];
 
-const proxy=u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+const proxies = [
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://cors.isomorphic-git.org/${u}`,
+    u => `https://thingproxy.freeboard.io/fetch/${u}`
+];
+
+async function proxyFetch(url) {
+    for (const p of proxies) {
+        try {
+            const r = await fetch(p(url), { cache: "no-store" });
+            if (r.ok) return r;
+        } catch {}
+    }
+    throw new Error("All proxies failed");
+}
+
 
 const tabsEl=document.getElementById("tabs");
 const retryBtn=document.getElementById("retryFailed");
@@ -139,7 +154,7 @@ async function loadFeedWithRetries(feed,retries){
     tab.classList.add("loading");
 
     try{
-        const r=await fetch(proxy(feed.url));
+        const r=await proxyFetch(feed.url);
         const t=await r.text();
         parseFeed(t,feed.name);
         channelStatus.set(feed.name,"loaded");
@@ -269,6 +284,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
