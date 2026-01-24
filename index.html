@@ -128,8 +128,13 @@ const feeds=[
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCOw9Jzw3p4XzL5Ub5WglJRQ",name:"Алексей Макаренков"}
 ];
 
-const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
+const lockScreen = document.getElementById("lockScreen");
+const passwordInput = document.getElementById("passwordInput");
+const passwordError = document.getElementById("passwordError");
 
+const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
+const correctPassword = "672318";
+    
 const proxies=[
 u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
 u=>`https://cors.isomorphic-git.org/${u}`,
@@ -353,20 +358,18 @@ const lockScreen=document.getElementById("lockScreen");
 const passwordInput=document.getElementById("passwordInput");
 const passwordError=document.getElementById("passwordError");
 
-passwordInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") {
-        if (passwordInput.value === "672318") {
-            lockScreen.style.display = "none"; // скрываем экран
-        } else {
-            passwordError.style.display = "block";
-            passwordInput.value = "";
-        }
+passwordInput.addEventListener("input", () => {
+    if (passwordInput.value === correctPassword) {
+        lockScreen.style.display = "none"; // скрываем блокировку
+    } else {
+        passwordError.style.display = "none"; // скрываем сообщение об ошибке
     }
 });
 
 </script>
 </body>
 </html>
+
 
 
 
