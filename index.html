@@ -218,29 +218,31 @@ function finalizeTabs(){
     const all=tabsEl.querySelector('[data-channel="Все видео"]');
     const tabs=[...tabsEl.querySelectorAll(".tab")].filter(t=>t!==all);
 
+    // Сохраняем порядок как в feeds
     tabs.sort((a,b)=>{
         const ca=a.dataset.channel;
         const cb=b.dataset.channel;
-        const sa=channelStatus.get(ca);
-        const sb=channelStatus.get(cb);
-
-        if(sa!==sb){
-            if(sa==="loaded") return -1;
-            if(sb==="loaded") return 1;
-            if(sa==="failed") return 1;
-            if(sb==="failed") return -1;
-        }
         return channelOrder.get(ca)-channelOrder.get(cb);
     });
 
+    // Очищаем контейнер и добавляем вкладку "Все видео"
     tabsEl.innerHTML="";
     tabsEl.appendChild(all);
+
+    // Обновляем текст каждой вкладки в зависимости от статуса канала
     tabs.forEach(t=>{
-        const n=t.dataset.channel;
-        t.textContent=n+(channelStatus.get(n)==="failed"?" ❌":"");
+        const name = t.dataset.channel;
+        const status = channelStatus.get(name); // loading / loaded / failed
+        let statusIcon = "";
+        if(status==="loading") statusIcon = " 🔄";
+        else if(status==="loaded") statusIcon = " ✅";
+        else if(status==="failed") statusIcon = " ❌";
+
+        t.textContent = name + statusIcon;
         tabsEl.appendChild(t);
     });
 
+    // Кнопка перезагрузки видна только если есть failed
     retryBtn.style.display=[...channelStatus.values()].includes("failed")?"block":"none";
 }
 
@@ -360,4 +362,5 @@ passwordInput.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
