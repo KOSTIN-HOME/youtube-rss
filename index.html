@@ -189,6 +189,7 @@ async function loadFeedWithRetries(feed,retries){
             setTimeout(()=>loadFeedWithRetries(feed,retries-1),1500);
             return;
         }
+        // Канал помечен как failed
         channelStatus.set(feed.name,"failed");
         videoMap.set(`__fail_${feed.name}`,{
             empty:true,
@@ -196,6 +197,12 @@ async function loadFeedWithRetries(feed,retries){
             channel:feed.name,
             date:new Date(0)
         });
+        // Повторная попытка в течение 1 минуты каждые 5 секунд
+        let start = Date.now();
+        const retryInterval = setInterval(()=>{
+            if(Date.now() - start > 60000) return clearInterval(retryInterval);
+            loadFeedWithRetries(feed,maxRetries);
+        },5000);
     }finally{
         tab.classList.remove("loading");
         finalizeTabs();
@@ -342,3 +349,4 @@ passwordInput.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
