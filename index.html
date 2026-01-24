@@ -63,7 +63,6 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 
 <body>
 
-<!-- Пункт 1: защита паролем -->
 <div id="lockScreen" style="
     position:fixed;
     inset:0;
@@ -89,7 +88,7 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
     </div>
 </div>
 
-<div id="app">
+<div id="app" style="display:none">
 <div id="player">
     <div id="videoInfo">Выберите видео</div>
     <div class="player-wrapper" id="playerWrapper"></div>
@@ -103,208 +102,246 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 </div>
 
 <script>
-const feeds=[
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ",name:"DeadP47"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCdKuE7a2QZeHPhDntXVZ91w",name:"Kuplinov"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCDF_NIAEkcAUvzxe1DUzaQA",name:"Rozetked"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCXvyU8oMwCmGOYYutgNwyiw",name:"Acting"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC_gKMJFeCf1bKzZr_fICkig",name:"TheDRZJ"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC2q4mHrzoR48mwSuAYtVPtQ",name:"Александр Панчин"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCgtAOyEQdAyjvm9ATCi_Aig",name:"AlexGyver"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC76KmU4gIQqVHZ3ESydElHA",name:"Черный Кумыс"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC-_iyv1-5NM5wmypELjz8Aw",name:"Максим Кузнецов"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC6uFoHcr_EEK6DgCS-LeTNA",name:"PRO Hi-Tech"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCHPwlUYfCZ1RzYNyZKvaRHw",name:"Portal News"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCI_OoGWEN7HHet11pNTFdJg",name:"Илья Геймер"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCsvsmFQ8eFRx5v6cdmuYBsg",name:"Restart"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCyPvbjMjnQBn-6FcxxovSHA",name:"Луцай"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCkrzQDo3U2GmHqqMjqYOuvA",name:"LoVisH Gaming Experience"},
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCOw9Jzw3p4XzL5Ub5WglJRQ",name:"Алексей Макаренков"}
-];
+let feeds = []; // текущий список каналов после ввода пароля
+let fullVideoList = [];
+let renderedCount = 0;
+const loadStep = 20; // кол-во видео за один раз
 
-const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
+const passwordInput = document.getElementById("passwordInput");
+const lockScreen = document.getElementById("lockScreen");
+const passwordError = document.getElementById("passwordError");
 
-const proxies=[
-u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-u=>`https://cors.isomorphic-git.org/${u}`,
-u=>`https://thingproxy.freeboard.io/fetch/${u}`
-];
+passwordInput.addEventListener("keydown", e=>{
+    if(e.key !== "Enter") return;
 
-async function proxyFetch(url){
-    for(const p of proxies){
+    if(passwordInput.value==="672318"){
+        feeds = [
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ",name:"DeadP47"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCdKuE7a2QZeHPhDntXVZ91w",name:"Kuplinov"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCDF_NIAEkcAUvzxe1DUzaQA",name:"Rozetked"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCXvyU8oMwCmGOYYutgNwyiw",name:"Acting"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC_gKMJFeCf1bKzZr_fICkig",name:"TheDRZJ"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC2q4mHrzoR48mwSuAYtVPtQ",name:"Александр Панчин"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCgtAOyEQdAyjvm9ATCi_Aig",name:"AlexGyver"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC76KmU4gIQqVHZ3ESydElHA",name:"Черный Кумыс"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC-_iyv1-5NM5wmypELjz8Aw",name:"Максим Кузнецов"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UC6uFoHcr_EEK6DgCS-LeTNA",name:"PRO Hi-Tech"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCHPwlUYfCZ1RzYNyZKvaRHw",name:"Portal News"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCI_OoGWEN7HHet11pNTFdJg",name:"Илья Геймер"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCsvsmFQ8eFRx5v6cdmuYBsg",name:"Restart"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCyPvbjMjnQBn-6FcxxovSHA",name:"Луцай"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCkrzQDo3U2GmHqqMjqYOuvA",name:"LoVisH Gaming Experience"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCOw9Jzw3p4XzL5Ub5WglJRQ",name:"Алексей Макаренков"}
+        ];
+    } else if(passwordInput.value==="672318kVa"){
+        // второй список — половина каналов
+        feeds = [
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCUzkWdUCkVrkKCcmut9epTQ",name:"DeadP47"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCdKuE7a2QZeHPhDntXVZ91w",name:"Kuplinov"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCDF_NIAEkcAUvzxe1DUzaQA",name:"Rozetked"},
+            {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCXvyU8oMwCmGOYYutgNwyiw",name:"Acting"}
+        ];
+    } else{
+        passwordError.style.display="block";
+        passwordInput.value="";
+        return;
+    }
+
+    lockScreen.style.display="none";
+    document.getElementById("app").style.display="flex";
+    startApp();
+});
+
+function startApp(){
+    const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
+    const proxies=[
+        u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+        u=>`https://cors.isomorphic-git.org/${u}`,
+        u=>`https://thingproxy.freeboard.io/fetch/${u}`
+    ];
+
+    const tabsEl=document.getElementById("tabs");
+    const retryBtn=document.getElementById("retryFailed");
+    const feedEl=document.getElementById("feed");
+    const loaderEl=document.getElementById("loader");
+    const playerWrapper=document.getElementById("playerWrapper");
+    const videoInfoEl=document.getElementById("videoInfo");
+
+    const videoMap=new Map();
+    const channelStatus=new Map();
+    let currentTab="Все видео";
+    const maxRetries=2;
+
+    init();
+
+    function init(){
+        // Восстановление видео из localStorage
+        const saved = localStorage.getItem("ytVideos");
+        if(saved){
+            JSON.parse(saved).forEach(v=>{
+                v.date = new Date(v.date);
+                videoMap.set(v.id,v);
+            });
+        }
+
+        renderTabs();
+        feeds.forEach(f=>channelStatus.set(f.name,"loading"));
+        feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
+
+        setInterval(checkNewVideos,10*60*1000);
+
+        feedEl.addEventListener("scroll", ()=>{
+            if(feedEl.scrollTop + feedEl.clientHeight >= feedEl.scrollHeight - 50){
+                renderNextBatch();
+            }
+        });
+    }
+
+    async function proxyFetch(url){
+        for(const p of proxies){
+            try{
+                const r=await fetch(p(url),{cache:"no-store"});
+                if(r.ok) return r;
+            }catch{}
+        }
+        throw new Error();
+    }
+
+    async function loadFeedWithRetries(feed,retries){
+        videoMap.delete(`__fail_${feed.name}`);
+        const tab=document.querySelector(`.tab[data-channel="${feed.name}"]`);
+        tab?.classList.add("loading");
+
         try{
-            const r=await fetch(p(url),{cache:"no-store"});
-            if(r.ok) return r;
-        }catch{}
+            const r=await proxyFetch(feed.url);
+            const t=await r.text();
+            parseFeed(t,feed.name);
+            channelStatus.set(feed.name,"loaded");
+        }catch{
+            if(retries>0){
+                setTimeout(()=>loadFeedWithRetries(feed,retries-1),1500);
+                return;
+            }
+            channelStatus.set(feed.name,"failed");
+            videoMap.set(`__fail_${feed.name}`,{
+                empty:true,
+                title:"Не удалось загрузить канал",
+                channel:feed.name,
+                date:new Date(0)
+            });
+            let start = Date.now();
+            const retryInterval = setInterval(()=>{
+                if(Date.now() - start > 60000) return clearInterval(retryInterval);
+                loadFeedWithRetries(feed,maxRetries);
+            },5000);
+        }finally{
+            tab?.classList.remove("loading");
+            finalizeTabs();
+            prepareVideoList();
+            renderNextBatch();
+        }
     }
-    throw new Error();
-}
 
-const tabsEl=document.getElementById("tabs");
-const retryBtn=document.getElementById("retryFailed");
-const feedEl=document.getElementById("feed");
-const loaderEl=document.getElementById("loader");
-const playerWrapper=document.getElementById("playerWrapper");
-const videoInfoEl=document.getElementById("videoInfo");
+    function checkNewVideos(){
+        feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
+    }
 
-const videoMap=new Map();
-const channelStatus=new Map();
+    function finalizeTabs(){
+        const all=tabsEl.querySelector('[data-channel="Все видео"]');
+        const tabs=[...tabsEl.querySelectorAll(".tab")].filter(t=>t!==all);
 
-let currentTab="Все видео";
-const maxRetries=2;
+        tabs.sort((a,b)=>{
+            const ca=a.dataset.channel;
+            const cb=b.dataset.channel;
+            const sa=channelStatus.get(ca);
+            const sb=channelStatus.get(cb);
 
-init();
-
-function init(){
-    // Восстановление видео из localStorage
-    const saved = localStorage.getItem("ytVideos");
-    if(saved){
-        JSON.parse(saved).forEach(v=>{
-            v.date = new Date(v.date);
-            videoMap.set(v.id,v);
+            if(sa!==sb){
+                if(sa==="loaded") return -1;
+                if(sb==="loaded") return 1;
+                if(sa==="failed") return 1;
+                if(sb==="failed") return -1;
+            }
+            return channelOrder.get(ca)-channelOrder.get(cb);
         });
-    }
 
-    renderTabs();
-    feeds.forEach(f=>channelStatus.set(f.name,"loading"));
-    feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
-
-    // Запуск проверки новых видео каждые 10 минут
-    setInterval(checkNewVideos,10*60*1000);
-}
-
-async function loadFeedWithRetries(feed,retries){
-    videoMap.delete(`__fail_${feed.name}`);
-
-    const tab=document.querySelector(`.tab[data-channel="${feed.name}"]`);
-    tab.classList.add("loading");
-
-    try{
-        const r=await proxyFetch(feed.url);
-        const t=await r.text();
-        parseFeed(t,feed.name);
-        channelStatus.set(feed.name,"loaded");
-    }catch{
-        if(retries>0){
-            setTimeout(()=>loadFeedWithRetries(feed,retries-1),1500);
-            return;
-        }
-        // Канал помечен как failed
-        channelStatus.set(feed.name,"failed");
-        videoMap.set(`__fail_${feed.name}`,{
-            empty:true,
-            title:"Не удалось загрузить канал",
-            channel:feed.name,
-            date:new Date(0)
+        tabsEl.innerHTML="";
+        tabsEl.appendChild(all);
+        tabs.forEach(t=>{
+            const n=t.dataset.channel;
+            t.textContent=n+(channelStatus.get(n)==="failed"?" ❌":"");
+            tabsEl.appendChild(t);
         });
-        // Повторная попытка в течение 1 минуты каждые 5 секунд
-        let start = Date.now();
-        const retryInterval = setInterval(()=>{
-            if(Date.now() - start > 60000) return clearInterval(retryInterval);
-            loadFeedWithRetries(feed,maxRetries);
-        },5000);
-    }finally{
-        tab.classList.remove("loading");
-        finalizeTabs();
-        renderVideosSorted();
+
+        retryBtn.style.display=[...channelStatus.values()].includes("failed")?"block":"none";
     }
-}
 
-function checkNewVideos(){
-    feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
-}
-
-function finalizeTabs(){
-    const all=tabsEl.querySelector('[data-channel="Все видео"]');
-    const tabs=[...tabsEl.querySelectorAll(".tab")].filter(t=>t!==all);
-
-    tabs.sort((a,b)=>{
-        const ca=a.dataset.channel;
-        const cb=b.dataset.channel;
-        const sa=channelStatus.get(ca);
-        const sb=channelStatus.get(cb);
-
-        if(sa!==sb){
-            if(sa==="loaded") return -1;
-            if(sb==="loaded") return 1;
-            if(sa==="failed") return 1;
-            if(sb==="failed") return -1;
-        }
-        return channelOrder.get(ca)-channelOrder.get(cb);
-    });
-
-    tabsEl.innerHTML="";
-    tabsEl.appendChild(all);
-    tabs.forEach(t=>{
-        const n=t.dataset.channel;
-        t.textContent=n+(channelStatus.get(n)==="failed"?" ❌":"");
-        tabsEl.appendChild(t);
-    });
-
-    retryBtn.style.display=[...channelStatus.values()].includes("failed")?"block":"none";
-}
-
-retryBtn.onclick=()=>{
-    feeds.forEach(f=>{
-        if(channelStatus.get(f.name)==="failed"){
-            channelStatus.set(f.name,"loading");
-            loadFeedWithRetries(f,maxRetries);
-        }
-    });
-    retryBtn.style.display="none";
-};
-
-function renderTabs(){
-    tabsEl.innerHTML="";
-    tabsEl.appendChild(createTab("Все видео"));
-    feeds.forEach(f=>tabsEl.appendChild(createTab(f.name)));
-}
-
-function createTab(name){
-    const t=document.createElement("div");
-    t.className="tab"+(name===currentTab?" active":"");
-    t.dataset.channel=name;
-    t.textContent=name;
-    t.onclick=()=>{
-        currentTab=name;
-        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-        t.classList.add("active");
-        renderVideosSorted();
+    retryBtn.onclick=()=>{
+        feeds.forEach(f=>{
+            if(channelStatus.get(f.name)==="failed"){
+                channelStatus.set(f.name,"loading");
+                loadFeedWithRetries(f,maxRetries);
+            }
+        });
+        retryBtn.style.display="none";
     };
-    return t;
-}
 
-function parseFeed(text,channel){
-    const xml=new DOMParser().parseFromString(text,"text/xml");
-    xml.querySelectorAll("entry").forEach(e=>{
-        let id=e.querySelector("yt\\:videoId")?.textContent;
-        if(!id){
-            const link=e.querySelector("link")?.getAttribute("href")||"";
-            const m=link.match(/v=([^&]+)/);
-            if(m) id=m[1];
-        }
-        if(!id||videoMap.has(id)) return;
+    function renderTabs(){
+        tabsEl.innerHTML="";
+        tabsEl.appendChild(createTab("Все видео"));
+        feeds.forEach(f=>tabsEl.appendChild(createTab(f.name)));
+    }
 
-        const video={
-            id,
-            title:e.querySelector("title")?.textContent||"",
-            channel,
-            date:new Date(e.querySelector("published")?.textContent)
+    function createTab(name){
+        const t=document.createElement("div");
+        t.className="tab"+(name===currentTab?" active":"");
+        t.dataset.channel=name;
+        t.textContent=name;
+        t.onclick=()=>{
+            currentTab=name;
+            document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+            t.classList.add("active");
+            prepareVideoList();
+            renderNextBatch(true);
         };
-        videoMap.set(id,video);
-    });
+        return t;
+    }
 
-    // Сохраняем все видео в localStorage после обработки канала
-    localStorage.setItem("ytVideos",JSON.stringify([...videoMap.values()]));
-}
+    function parseFeed(text,channel){
+        const xml=new DOMParser().parseFromString(text,"text/xml");
+        xml.querySelectorAll("entry").forEach(e=>{
+            let id=e.querySelector("yt\\:videoId")?.textContent;
+            if(!id){
+                const link=e.querySelector("link")?.getAttribute("href")||"";
+                const m=link.match(/v=([^&]+)/);
+                if(m) id=m[1];
+            }
+            if(!id||videoMap.has(id)) return;
 
-function renderVideosSorted(){
-    feedEl.innerHTML="";
-    loaderEl.textContent="";
-    [...videoMap.values()]
-        .filter(v=>currentTab==="Все видео"||v.channel===currentTab)
-        .sort((a,b)=>b.date-a.date)
-        .forEach(v=>{
+            const video={
+                id,
+                title:e.querySelector("title")?.textContent||"",
+                channel,
+                date:new Date(e.querySelector("published")?.textContent)
+            };
+            videoMap.set(id,video);
+        });
+
+        localStorage.setItem("ytVideos",JSON.stringify([...videoMap.values()]));
+    }
+
+    function prepareVideoList(){
+        fullVideoList = [...videoMap.values()]
+            .filter(v=>currentTab==="Все видео"||v.channel===currentTab)
+            .sort((a,b)=>b.date-a.date);
+        renderedCount = 0;
+        feedEl.innerHTML = '';
+    }
+
+    function renderNextBatch(reset=false){
+        if(reset) renderedCount = 0;
+        const batch = fullVideoList.slice(renderedCount, renderedCount + loadStep);
+        batch.forEach(v=>{
             const d=document.createElement("div");
             d.className="video";
             if(v.empty){
@@ -322,31 +359,16 @@ function renderVideosSorted(){
             }
             feedEl.appendChild(d);
         });
-}
-
-function loadVideo(v){
-    playerWrapper.innerHTML=`
-    <iframe src="https://www.youtube.com/embed/${v.id}?playsinline=1"
-    allow="autoplay" allowfullscreen style="width:100%;height:100%;border:none"></iframe>`;
-    videoInfoEl.textContent=`${v.title} — ${v.channel}`;
-}
-
-/* пароль */
-const lockScreen=document.getElementById("lockScreen");
-const passwordInput=document.getElementById("passwordInput");
-const passwordError=document.getElementById("passwordError");
-
-passwordInput.addEventListener("keydown",e=>{
-    if(e.key==="Enter"){
-        if(passwordInput.value==="672318"){
-            lockScreen.remove();
-        }else{
-            passwordError.style.display="block";
-            passwordInput.value="";
-        }
+        renderedCount += batch.length;
     }
-});
+
+    function loadVideo(v){
+        playerWrapper.innerHTML=`
+        <iframe src="https://www.youtube.com/embed/${v.id}?playsinline=1"
+        allow="autoplay" allowfullscreen style="width:100%;height:100%;border:none"></iframe>`;
+        videoInfoEl.textContent=`${v.title} — ${v.channel}`;
+    }
+}
 </script>
 </body>
 </html>
-
