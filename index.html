@@ -3,9 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <title>YouTube RSS Viewer</title>
 
 <style>
@@ -19,45 +16,44 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
 #app{display:flex;height:100vh}
+
 #player{flex:1.6;padding:20px;display:flex;flex-direction:column;gap:10px}
 .player-wrapper{width:100%;aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden}
-#videoInfo{font-size:14px;color:var(--sub);min-height:20px}
+#videoInfo{font-size:14px;color:var(--sub)}
+
 #feedContainer{flex:1;display:flex;flex-direction:column;border-left:1px solid #222}
 #tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:var(--bg2);border-bottom:1px solid #222}
-.tab{padding:6px 12px;border-radius:8px;cursor:pointer;background:#222;color:var(--sub);font-size:14px;white-space:nowrap}
+.tab{padding:6px 12px;border-radius:8px;cursor:pointer;background:#222;color:var(--sub)}
 .tab.active{background:var(--accent);color:#fff}
-@keyframes blinkGreen {
-  0%, 100% { color: #8BC34A; opacity: 1; }
-  50% { color: #C5E1A5; opacity: 0.5; }
+.tab.updating{animation:blink 1s infinite}
+
+@keyframes blink{
+  0%,100%{opacity:1}
+  50%{opacity:.5}
 }
-.tab.updating { animation: blinkGreen 1s infinite; }
 
 #feed{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
 .video{display:flex;gap:12px;padding:10px;border-radius:12px;cursor:pointer;background:var(--bg2)}
 .video:hover{background:#333}
+.video.active{
+    outline:2px solid var(--accent);
+    background:#2a0000;
+}
+
 .thumb{width:168px;aspect-ratio:16/9;border-radius:10px;object-fit:cover}
 .title{font-size:15px;font-weight:500}
-.meta{font-size:13px;color:var(--sub);margin-top:6px}
+.meta{font-size:13px;color:var(--sub)}
+
 #loader{padding:20px;color:var(--sub)}
 
-@media (max-width: 768px) {
-    #app {flex-direction: column;height:auto}
-    #player {flex:none;padding:10px}
-    #feedContainer {flex:none;border-left:none;border-top:1px solid #222}
-    #feed {overflow-y:visible}
+@media (max-width:768px){
+    #app{flex-direction:column}
+    #feedContainer{border-left:none;border-top:1px solid #222}
 }
 </style>
 </head>
 
 <body>
-
-<!-- lock -->
-<div id="lockScreen" style="position:fixed;inset:0;background:#0f0f0f;display:flex;align-items:center;justify-content:center;z-index:9999;">
-    <div style="background:#181818;padding:20px;border-radius:12px;min-width:260px">
-        <div style="margin-bottom:10px;color:#aaa">Введите пароль</div>
-        <input id="passwordInput" type="password" style="width:100%;padding:8px;border-radius:8px;border:1px solid #333;background:#000;color:#fff;">
-    </div>
-</div>
 
 <div id="app">
 <div id="player">
@@ -67,7 +63,7 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 
 <div id="feedContainer">
     <div id="tabs"></div>
-    <div id="feed"><div id="loader">Подготовка…</div></div>
+    <div id="feed"><div id="loader">Загрузка…</div></div>
 </div>
 </div>
 
@@ -91,28 +87,11 @@ const feeds=[
 {url:"https://www.youtube.com/feeds/videos.xml?channel_id=UCOw9Jzw3p4XzL5Ub5WglJRQ",name:"Алексей Макаренков"}
 ];
 
-const PASSWORD_HASH="346058ad3f947af4bd7c1dbe70ed1c155eafc95d856c9e781b25e871f0b736e6";
-const lockScreen=document.getElementById("lockScreen");
-const passwordInput=document.getElementById("passwordInput");
-
-window.addEventListener("load",()=>passwordInput.focus());
-
-async function sha256(text){
-    const data=new TextEncoder().encode(text);
-    const hashBuffer=await crypto.subtle.digest("SHA-256",data);
-    return [...new Uint8Array(hashBuffer)].map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-passwordInput.addEventListener("input",async()=>{
-    if(await sha256(passwordInput.value)===PASSWORD_HASH){
-        lockScreen.style.display="none";
-    }
-});
-
 const proxies=[
 u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-u=>`https://cors.isomorphic-git.org/${u}`,
-u=>`https://thingproxy.freeboard.io/fetch/${u}`
+u=>`https://cors.isomorphic-git.org/${u}`
 ];
+
 function proxyFetch(url){
     return Promise.any(proxies.map(p=>fetch(p(url),{cache:"no-store"})));
 }
@@ -123,45 +102,56 @@ const loaderEl=document.getElementById("loader");
 const playerWrapper=document.getElementById("playerWrapper");
 const videoInfoEl=document.getElementById("videoInfo");
 
-const playerIframe=document.createElement("iframe");
-playerIframe.allow="autoplay";
-playerIframe.allowFullscreen=true;
-playerIframe.style.width="100%";
-playerIframe.style.height="100%";
-playerIframe.style.border="none";
-playerWrapper.appendChild(playerIframe);
+const iframe=document.createElement("iframe");
+iframe.allow="autoplay";
+iframe.allowFullscreen=true;
+iframe.style.width="100%";
+iframe.style.height="100%";
+iframe.style.border="none";
+playerWrapper.appendChild(iframe);
 
 const videoMap=new Map();
 const channelStatus=new Map();
+
 let currentTab="Все видео";
+let currentVideoId=null;
 
 let videosPerPage=20;
 let videosLoaded=0;
 let videosToRender=[];
 
-let lastTime=0;
+/* ========= сохранение времени ========= */
+
+let timePoller=null;
 
 window.addEventListener("message",e=>{
-    if(!e.data||typeof e.data!=="string"||!e.data.includes("infoDelivery"))return;
+    if(!e.data||typeof e.data!=="string")return;
+    if(!e.data.includes("infoDelivery"))return;
+
     try{
         const d=JSON.parse(e.data);
-        if(d?.info?.currentTime){
-            lastTime=Math.floor(d.info.currentTime);
-            localStorage.setItem("lastVideoTime",lastTime);
+        const t=d?.info?.currentTime;
+        if(typeof t==="number"){
+            localStorage.setItem("lastVideoTime",Math.floor(t));
         }
     }catch{}
 });
 
-function saveVideos(){
-    const limit=20;
-    const grouped={};
-    [...videoMap.values()].forEach(v=>{
-        if(!grouped[v.channel])grouped[v.channel]=[];
-        grouped[v.channel].push(v);
-    });
-    const out=Object.values(grouped).flatMap(arr=>arr.sort((a,b)=>b.date-a.date).slice(0,limit));
-    localStorage.setItem("ytVideos",JSON.stringify(out));
+function startTimePolling(){
+    stopTimePolling();
+    timePoller=setInterval(()=>{
+        iframe.contentWindow?.postMessage(
+            JSON.stringify({event:"command",func:"getCurrentTime",args:[]}),
+            "*"
+        );
+    },3000);
 }
+
+function stopTimePolling(){
+    if(timePoller) clearInterval(timePoller);
+}
+
+/* ========= init ========= */
 
 init();
 
@@ -175,7 +165,7 @@ function init(){
     }
 
     renderTabs();
-    renderVideosSorted();
+    renderVideos();
 
     feeds.forEach(f=>{
         channelStatus.set(f.name,"loading");
@@ -183,53 +173,23 @@ function init(){
     });
 
     const lastId=localStorage.getItem("lastVideo");
-    const t=parseInt(localStorage.getItem("lastVideoTime")||"0",10);
+    const lastTime=parseInt(localStorage.getItem("lastVideoTime")||"0",10);
     if(lastId&&videoMap.has(lastId)){
-        loadVideo(videoMap.get(lastId),t);
+        loadVideo(videoMap.get(lastId),lastTime);
     }
 }
 
+/* ========= feeds ========= */
+
 async function loadFeed(feed){
-    channelStatus.set(feed.name,"loading");
-    finalizeTabs();
     try{
         const r=await proxyFetch(feed.url);
         parseFeed(await r.text(),feed.name);
         channelStatus.set(feed.name,"loaded");
     }catch{
         channelStatus.set(feed.name,"error");
-    }finally{
-        finalizeTabs();
-        renderVideosSorted();
     }
-}
-
-function renderTabs(){
-    tabsEl.innerHTML="";
-    tabsEl.appendChild(createTab("Все видео"));
-    feeds.forEach(f=>tabsEl.appendChild(createTab(f.name)));
-}
-
-function createTab(name){
-    const t=document.createElement("div");
-    t.className="tab"+(name===currentTab?" active":"");
-    t.dataset.channel=name;
-    t.textContent=name;
-    t.onclick=()=>{
-        if(currentTab===name)return;
-        currentTab=name;
-        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-        t.classList.add("active");
-        renderVideosSorted();
-    };
-    return t;
-}
-
-function finalizeTabs(){
-    tabsEl.querySelectorAll(".tab").forEach(t=>{
-        const s=channelStatus.get(t.dataset.channel);
-        t.classList.toggle("updating",s==="loading");
-    });
+    renderVideos();
 }
 
 function parseFeed(text,channel){
@@ -248,10 +208,44 @@ function parseFeed(text,channel){
             date:new Date(e.querySelector("published")?.textContent)
         });
     });
+
     saveVideos();
 }
 
-function renderVideosSorted(reset=true){
+function saveVideos(){
+    const out=[];
+    feeds.forEach(f=>{
+        const arr=[...videoMap.values()]
+            .filter(v=>v.channel===f.name)
+            .sort((a,b)=>b.date-a.date)
+            .slice(0,20);
+        out.push(...arr);
+    });
+    localStorage.setItem("ytVideos",JSON.stringify(out));
+}
+
+/* ========= UI ========= */
+
+function renderTabs(){
+    tabsEl.innerHTML="";
+    tabsEl.appendChild(makeTab("Все видео"));
+    feeds.forEach(f=>tabsEl.appendChild(makeTab(f.name)));
+}
+
+function makeTab(name){
+    const t=document.createElement("div");
+    t.className="tab"+(name===currentTab?" active":"");
+    t.textContent=name;
+    t.onclick=()=>{
+        currentTab=name;
+        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+        t.classList.add("active");
+        renderVideos(true);
+    };
+    return t;
+}
+
+function renderVideos(reset=true){
     if(reset){
         feedEl.innerHTML="";
         videosLoaded=0;
@@ -262,13 +256,14 @@ function renderVideosSorted(reset=true){
 
     const slice=videosToRender.slice(videosLoaded,videosLoaded+videosPerPage);
     slice.forEach(v=>{
-        const imgPreload=new Image();
-        imgPreload.src=`https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`;
+        const img=new Image();
+        img.src=`https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`;
 
         const d=document.createElement("div");
-        d.className="video";
+        d.className="video"+(v.id===currentVideoId?" active":"");
+        d.dataset.id=v.id;
         d.innerHTML=`
-            <img class="thumb" src="${imgPreload.src}">
+            <img class="thumb" src="${img.src}">
             <div>
                 <div class="title">${v.title}</div>
                 <div class="meta">${v.channel} • ${v.date.toLocaleDateString("ru-RU")}</div>
@@ -276,24 +271,32 @@ function renderVideosSorted(reset=true){
         d.onclick=()=>loadVideo(v,0);
         feedEl.appendChild(d);
     });
+
     videosLoaded+=slice.length;
     loaderEl.style.display=videosLoaded<videosToRender.length?"block":"none";
 }
 
 feedEl.addEventListener("scroll",()=>{
     if(feedEl.scrollTop+feedEl.clientHeight>=feedEl.scrollHeight-50){
-        if(videosLoaded<videosToRender.length){
-            renderVideosSorted(false);
-        }
+        renderVideos(false);
     }
 });
 
+/* ========= player ========= */
+
 function loadVideo(v,start=0){
-    playerIframe.src=`https://www.youtube.com/embed/${v.id}?enablejsapi=1&autoplay=1&playsinline=1&start=${start}`;
+    currentVideoId=v.id;
+
+    document.querySelectorAll(".video").forEach(x=>{
+        x.classList.toggle("active",x.dataset.id===v.id);
+    });
+
+    iframe.src=`https://www.youtube.com/embed/${v.id}?enablejsapi=1&autoplay=1&playsinline=1&start=${start}`;
     videoInfoEl.textContent=`${v.title} — ${v.channel}`;
+
     localStorage.setItem("lastVideo",v.id);
+    startTimePolling();
 }
 </script>
 </body>
 </html>
-
