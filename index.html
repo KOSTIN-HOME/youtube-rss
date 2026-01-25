@@ -23,7 +23,6 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 #player{flex:1.6;padding:20px;display:flex;flex-direction:column;gap:10px}
 .player-wrapper{width:100%;aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden}
 #videoInfo{font-size:14px;color:var(--sub);min-height:20px}
-#videoTime{font-size:13px;color:#aaa;min-height:18px}
 #feedContainer{flex:1;display:flex;flex-direction:column;border-left:1px solid #222}
 #tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:var(--bg2);border-bottom:1px solid #222}
 .tab{padding:6px 12px;border-radius:8px;cursor:pointer;background:#222;color:var(--sub);font-size:14px;white-space:nowrap}
@@ -99,7 +98,6 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 <div id="app">
 <div id="player">
     <div id="videoInfo">Выберите видео</div>
-    <div id="videoTime">Время просмотра: 0:00</div>
     <div class="player-wrapper" id="playerWrapper"></div>
 </div>
 
@@ -108,8 +106,6 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
     <div id="feed"><div id="loader">Подготовка…</div></div>
 </div>
 </div>
-
-<script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 const feeds=[
@@ -136,11 +132,13 @@ const lockScreen = document.getElementById("lockScreen");
 const passwordInput = document.getElementById("passwordInput");
 
 window.addEventListener("load", () => passwordInput.focus());
+
 passwordInput.addEventListener("blur", () => {
     if (lockScreen.style.display !== "none") {
         setTimeout(() => passwordInput.focus(), 0);
     }
 });
+
 async function sha256(text) {
     const data = new TextEncoder().encode(text);
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -148,6 +146,7 @@ async function sha256(text) {
         .map(b => b.toString(16).padStart(2, "0"))
         .join("");
 }
+
 passwordInput.addEventListener("input", async () => {
     const hash = await sha256(passwordInput.value);
     if (hash === PASSWORD_HASH) {
@@ -156,11 +155,13 @@ passwordInput.addEventListener("input", async () => {
 });
 
 const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
+
 const proxies=[
 u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
 u=>`https://cors.isomorphic-git.org/${u}`,
 u=>`https://thingproxy.freeboard.io/fetch/${u}`
 ];
+
 async function proxyFetch(url) {
     const promises = proxies.map(p => 
         fetch(p(url), { cache: "no-store" }).then(r => {
@@ -176,7 +177,6 @@ const feedEl=document.getElementById("feed");
 const loaderEl=document.getElementById("loader");
 const playerWrapper=document.getElementById("playerWrapper");
 const videoInfoEl=document.getElementById("videoInfo");
-const videoTimeEl=document.getElementById("videoTime");
 
 const playerIframe = document.createElement("iframe");
 playerIframe.allow = "autoplay";
@@ -190,14 +190,10 @@ const videoMap=new Map();
 const channelStatus=new Map();
 let currentTab="Все видео";
 let currentVideoId = null;
+const maxRetries=2;
 let videosPerPage = 20;
 let videosLoaded = 0;
 let videosToRender = [];
-let ytPlayer = null;
-let timeUpdateInterval = null;
-let videoStartTime = 0;
-let videoLoadTimestamp = 0; 
-let playbackRate = 1; 
 
 init();
 
@@ -209,16 +205,21 @@ function init(){
             videoMap.set(v.id,v);
         });
     }
+
     renderTabs();
     feeds.forEach(f=>channelStatus.set(f.name,"loading"));
-    feeds.forEach(f=>loadFeedWithRetries(f,2));
+    feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
+
     setInterval(checkNewVideos,10*60*1000);
+
+    // Рендерим "Все видео" сразу
     renderVideosSorted();
 }
 
 async function loadFeedWithRetries(feed) {
     channelStatus.set(feed.name, "loading");
     finalizeTabs();
+
     try {
         const r = await proxyFetch(feed.url);
         const t = await r.text();
@@ -234,24 +235,29 @@ async function loadFeedWithRetries(feed) {
 }
 
 function checkNewVideos(){
-    feeds.forEach(f=>loadFeedWithRetries(f,2));
+    feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
 }
 
 function finalizeTabs(){
     const all = tabsEl.querySelector('[data-channel="Все видео"]');
     const tabs = [...tabsEl.querySelectorAll(".tab")].filter(t => t !== all);
+
     tabs.sort((a,b) => channelOrder.get(a.dataset.channel) - channelOrder.get(b.dataset.channel));
+
     tabsEl.innerHTML = "";
     tabsEl.appendChild(all);
+
     tabs.forEach(t => {
         const name = t.dataset.channel;
         const status = channelStatus.get(name);
+
         t.classList.remove("updating");
         if(status === "loading"){
             t.classList.add("updating");
         } else {
             t.style.color = "#aaa";
         }
+
         tabsEl.appendChild(t);
     });
 }
@@ -279,6 +285,7 @@ function createTab(name){
 function parseFeed(text,channel){
     const xml=new DOMParser().parseFromString(text,"text/xml");
     let channelVideos = [];
+
     xml.querySelectorAll("entry").forEach(e=>{
         let id=e.querySelector("yt\\:videoId")?.textContent;
         if(!id){
@@ -287,6 +294,7 @@ function parseFeed(text,channel){
             if(m) id=m[1];
         }
         if(!id) return;
+
         const video={
             id,
             title:e.querySelector("title")?.textContent||"",
@@ -296,12 +304,15 @@ function parseFeed(text,channel){
         videoMap.set(id,video);
         channelVideos.push(video);
     });
+
+    // Сохраняем только последние 20 видео на канал
     const saved = JSON.parse(localStorage.getItem("ytVideos")||"[]");
     const otherVideos = saved.filter(v=>v.channel!==channel);
     channelVideos.sort((a,b)=>b.date-a.date);
     localStorage.setItem("ytVideos",JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
 }
 
+// Рендер с подсветкой активного видео
 function renderVideosSorted(reset = true) {
     if (reset) {
         feedEl.innerHTML = "";
@@ -310,6 +321,7 @@ function renderVideosSorted(reset = true) {
             .filter(v => currentTab === "Все видео" || v.channel === currentTab)
             .sort((a, b) => b.date - a.date);
     }
+
     let slice = videosToRender.slice(videosLoaded, videosLoaded + videosPerPage);
     slice.forEach(v => {
         const d = document.createElement("div");
@@ -326,7 +338,9 @@ function renderVideosSorted(reset = true) {
         d.onclick = () => loadVideo(v);
         feedEl.appendChild(d);
     });
+
     videosLoaded += slice.length;
+
     loaderEl.style.display = videosLoaded < videosToRender.length ? "block" : "none";
 }
 
@@ -338,57 +352,26 @@ feedEl.addEventListener("scroll", () => {
     }
 });
 
-// Функция для форматирования времени
-function formatTime(seconds){
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2,"0")}`;
-}
-
 function loadVideo(v){
-    currentVideoId = v.id;
+    playerIframe.src = `https://www.youtube.com/embed/${v.id}?playsinline=1&autoplay=1`;
     videoInfoEl.textContent = `${v.title} — ${v.channel}`;
+    currentVideoId = v.id;
+
     document.querySelectorAll(".video").forEach(x => x.classList.remove("active"));
     const el = document.querySelector(`.video[data-video-id="${v.id}"]`);
     if(el) el.classList.add("active");
 
-    const savedTime = parseFloat(localStorage.getItem(`ytTime_${v.id}`) || 0);
-    videoStartTime = savedTime;
-    videoLoadTimestamp = Date.now();
-    
-    playerIframe.src = `https://www.youtube.com/embed/${v.id}?autoplay=1&playsinline=1&start=${Math.floor(savedTime)}`;
-    videoTimeEl.textContent = `Время просмотра: ${Math.floor(savedTime / 5) * 5}`;
-
     // Сохраняем последнее видео
     localStorage.setItem("ytLastVideo", v.id);
-
-    clearInterval(timeUpdateInterval);
-
-    timeUpdateInterval = setInterval(() => {
-        const elapsed = (Date.now() - videoLoadTimestamp) / 1000; // секунды
-        let currentTime = videoStartTime + elapsed * playbackRate;
-        const flooredTime = Math.floor(currentTime / 5) * 5;
-        videoTimeEl.textContent = `Время просмотра: ${formatTime(flooredTime)}`;
-        localStorage.setItem(`ytTime_${currentVideoId}`, currentTime);
-    }, 500);
 }
 
-// Обработка сообщений от iframe
-window.addEventListener("message", (event) => {
-    if (!event.data) return;
-    let data = null;
-    try { data = JSON.parse(event.data); } catch {}
-    if (!data || typeof data.currentTime !== "number") return;
-    const rawTime = data.currentTime;
-    const flooredTime = Math.floor(rawTime / 5) * 5; // округляем до ближайшего 5
-    videoTimeEl.textContent = `Время просмотра: ${formatTime(flooredTime)}`;
-    if(currentVideoId){
-        localStorage.setItem(`ytTime_${currentVideoId}`, rawTime);
+// Восстанавливаем последнее видео
+window.addEventListener("load", () => {
+    const last = localStorage.getItem("ytLastVideo");
+    if(last && videoMap.has(last)){
+        loadVideo(videoMap.get(last));
     }
 });
 </script>
 </body>
 </html>
-
-
-
