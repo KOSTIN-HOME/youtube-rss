@@ -195,6 +195,9 @@ let videosLoaded = 0;
 let videosToRender = [];
 let ytPlayer = null;
 let timeUpdateInterval = null;
+let videoStartTime = 0;
+let videoLoadTimestamp = 0; 
+let playbackRate = 1; 
 
 init();
 
@@ -349,23 +352,24 @@ function loadVideo(v){
     const el = document.querySelector(`.video[data-video-id="${v.id}"]`);
     if(el) el.classList.add("active");
 
+    const savedTime = parseFloat(localStorage.getItem(`ytTime_${v.id}`) || 0);
+    videoStartTime = savedTime;
+    videoLoadTimestamp = Date.now();
+    
+    playerIframe.src = `https://www.youtube.com/embed/${v.id}?autoplay=1&playsinline=1&start=${Math.floor(savedTime)}`;
+    videoTimeEl.textContent = `Время просмотра: ${Math.floor(savedTime / 5) * 5}`;
+
     // Сохраняем последнее видео
     localStorage.setItem("ytLastVideo", v.id);
 
-    const savedTime = parseInt(localStorage.getItem(`ytTime_${v.id}`) || 0);
-    playerIframe.src = `https://www.youtube.com/embed/${v.id}?autoplay=1&playsinline=1&start=${savedTime}`;
-
-    // Сразу обновляем таймер на правильное время
-    videoTimeEl.textContent = `Время просмотра: ${formatTime(savedTime)}`;
-
-    // Очистим старый интервал
     clearInterval(timeUpdateInterval);
 
-    // Каждые 500ms запрашиваем текущее время видео через postMessage
     timeUpdateInterval = setInterval(() => {
-        try {
-            playerIframe.contentWindow.postMessage('{"event":"listening","id":1,"channel":"widget"}', '*');
-        } catch {}
+        const elapsed = (Date.now() - videoLoadTimestamp) / 1000; // секунды
+        let currentTime = videoStartTime + elapsed * playbackRate;
+        const flooredTime = Math.floor(currentTime / 5) * 5;
+        videoTimeEl.textContent = `Время просмотра: ${formatTime(flooredTime)}`;
+        localStorage.setItem(`ytTime_${currentVideoId}`, currentTime);
     }, 500);
 }
 
@@ -385,5 +389,6 @@ window.addEventListener("message", (event) => {
 </script>
 </body>
 </html>
+
 
 
