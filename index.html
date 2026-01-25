@@ -348,36 +348,27 @@ function loadVideo(v){
     const el = document.querySelector(`.video[data-video-id="${v.id}"]`);
     if(el) el.classList.add("active");
 
-    clearInterval(timeUpdateInterval);
+    // Сохраняем последнее видео
+    localStorage.setItem("ytLastVideo", v.id);
 
-    // Загружаем видео
-    if(!ytPlayer){
-        ytPlayer = new YT.Player(playerIframe, {
-            videoId: v.id,
-            events: {
-                onReady: (event)=>{
-                    const savedTime = parseFloat(localStorage.getItem(`ytTime_${v.id}`) || 0);
-                    event.target.seekTo(savedTime, true);
-                    event.target.playVideo();
-                }
-            }
-        });
-    } else {
-        ytPlayer.loadVideoById(v.id);
-        const savedTime = parseFloat(localStorage.getItem(`ytTime_${v.id}`) || 0);
-        ytPlayer.seekTo(savedTime, true);
+    // Загружаем видео через обычный iframe
+    playerIframe.src = `https://www.youtube.com/embed/${v.id}?autoplay=1&playsinline=1`;
+
+    // Восстанавливаем сохранённое время через параметр start
+    const savedTime = parseInt(localStorage.getItem(`ytTime_${v.id}`) || 0);
+    if(savedTime > 0){
+        playerIframe.src += `&start=${savedTime}`;
     }
 
-    // Обновляем время каждые 5 секунд
-    timeUpdateInterval = setInterval(()=>{
-        if(ytPlayer && ytPlayer.getCurrentTime){
-            const currentTime = ytPlayer.getCurrentTime();
-            videoTimeEl.textContent = `Время просмотра: ${formatTime(currentTime)}`;
-            localStorage.setItem(`ytTime_${v.id}`, currentTime);
-        }
-    },5000);
-
-    localStorage.setItem("ytLastVideo", v.id);
+    // Запускаем интервал обновления времени каждые 5 секунд
+    clearInterval(timeUpdateInterval);
+    timeUpdateInterval = setInterval(() => {
+        // Здесь мы не можем точно получить текущее время без API, поэтому просто инкрементируем
+        let currentTime = parseInt(localStorage.getItem(`ytTime_${v.id}`) || 0);
+        currentTime += 5;
+        videoTimeEl.textContent = `Время просмотра: ${formatTime(currentTime)}`;
+        localStorage.setItem(`ytTime_${v.id}`, currentTime);
+    }, 5000);
 }
 
 window.addEventListener("load", () => {
@@ -389,3 +380,4 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
