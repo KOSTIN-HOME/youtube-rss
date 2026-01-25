@@ -26,11 +26,7 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 #tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:var(--bg2);border-bottom:1px solid #222}
 .tab{padding:6px 12px;border-radius:8px;cursor:pointer;background:#222;color:var(--sub);font-size:14px;white-space:nowrap}
 .tab.active{background:var(--accent);color:#fff}
-.tab.loading::after{
-    content:"";display:inline-block;margin-left:6px;width:12px;height:12px;
-    border:2px solid var(--text);border-top-color:var(--accent);
-    border-radius:50%;animation:spin .8s linear infinite
-}
+
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes blinkGreen {
   0%, 100% { color: #8BC34A; opacity: 1; }
@@ -39,16 +35,6 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 
 .tab.updating {
   animation: blinkGreen 1s infinite;
-}
-
-#retryFailed{
-    margin:8px;
-    padding:6px 10px;
-    background:#222;
-    color:#fff;
-    border:1px solid #333;
-    border-radius:8px;
-    cursor:pointer;
 }
 
 #feed{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
@@ -182,17 +168,31 @@ const videoInfoEl=document.getElementById("videoInfo");
 
 const playerIframe = document.createElement("iframe");
 playerIframe.allow = "autoplay";
+playerIframe.src = "";
 playerIframe.allowFullscreen = true;
 playerIframe.style.width = "100%";
 playerIframe.style.height = "100%";
 playerIframe.style.border = "none";
 playerWrapper.appendChild(playerIframe);
 
+let lastTime = 0;
+
+window.addEventListener("message", e => {
+    if (!e.data || typeof e.data !== "string") return;
+    if (!e.data.includes("infoDelivery")) return;
+
+    const data = JSON.parse(e.data);
+    const time = data?.info?.currentTime;
+    if (time) {
+        lastTime = Math.floor(time);
+        localStorage.setItem("lastVideoTime", lastTime);
+    }
+});
+    
 const videoMap=new Map();
 const channelStatus=new Map();
 
 let currentTab="Все видео";
-const maxRetries=2;
 
 // Для ленивой подгрузки
 let videosPerPage = 20;
@@ -217,6 +217,14 @@ function init(){
     feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
 
     setInterval(checkNewVideos,10*60*1000);
+
+    const lastId = localStorage.getItem("lastVideo");
+    const lastTime = parseInt(localStorage.getItem("lastVideoTime") || "0", 10);
+
+    if (lastId && videoMap.has(lastId)) {
+        loadVideo(videoMap.get(lastId), lastTime);
+    }
+    
 }
 
 async function loadFeedWithRetries(feed) {
@@ -305,8 +313,26 @@ function parseFeed(text,channel){
         videoMap.set(id,video);
     });
 
-    localStorage.setItem("ytVideos",JSON.stringify([...videoMap.values()]));
+    saveVideos();
 }
+
+function saveVideos() {
+    const perChannelLimit = 20;
+
+    const grouped = {};
+    [...videoMap.values()].forEach(v => {
+        if (!grouped[v.channel]) grouped[v.channel] = [];
+        grouped[v.channel].push(v);
+    });
+
+    const limited = Object.values(grouped)
+        .flatMap(arr =>
+            arr.sort((a,b)=>b.date-a.date).slice(0, perChannelLimit)
+        );
+
+    localStorage.setItem("ytVideos", JSON.stringify(limited));
+}
+
 
 // Новая версия с ленивой подгрузкой
 function renderVideosSorted(reset = true) {
@@ -320,6 +346,9 @@ function renderVideosSorted(reset = true) {
 
     let slice = videosToRender.slice(videosLoaded, videosLoaded + videosPerPage);
     slice.forEach(v => {
+        const imgPreload = new Image();
+        imgPreload.src = `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`;
+
         const d = document.createElement("div");
         d.className = "video";
         d.innerHTML = `
@@ -348,12 +377,14 @@ feedEl.addEventListener("scroll", () => {
     }
 });
 
-function loadVideo(v){
-    playerIframe.src = `https://www.youtube.com/embed/${v.id}?playsinline=1&autoplay=1`;
+function loadVideo(v, start = 0){
+    playerIframe.src = `https://www.youtube.com/embed/${v.id}?enablejsapi=1&playsinline=1&autoplay=1&start=${start}`;
     videoInfoEl.textContent = `${v.title} — ${v.channel}`;
+    localStorage.setItem("lastVideo", v.id);
 }
 
 </script>
 </body>
 </html>
+
 
