@@ -335,6 +335,7 @@ feedEl.addEventListener("scroll", () => {
     }
 });
 
+// Функция для форматирования времени
 function formatTime(seconds){
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
@@ -351,33 +352,38 @@ function loadVideo(v){
     // Сохраняем последнее видео
     localStorage.setItem("ytLastVideo", v.id);
 
-    // Загружаем видео через обычный iframe
-    playerIframe.src = `https://www.youtube.com/embed/${v.id}?autoplay=1&playsinline=1`;
-
-    // Восстанавливаем сохранённое время через параметр start
     const savedTime = parseInt(localStorage.getItem(`ytTime_${v.id}`) || 0);
-    if(savedTime > 0){
-        playerIframe.src += `&start=${savedTime}`;
-    }
+    playerIframe.src = `https://www.youtube.com/embed/${v.id}?autoplay=1&playsinline=1&start=${savedTime}`;
 
-    // Запускаем интервал обновления времени каждые 5 секунд
+    // Сразу обновляем таймер на правильное время
+    videoTimeEl.textContent = `Время просмотра: ${formatTime(savedTime)}`;
+
+    // Очистим старый интервал
     clearInterval(timeUpdateInterval);
+
+    // Каждые 500ms запрашиваем текущее время видео через postMessage
     timeUpdateInterval = setInterval(() => {
-        // Здесь мы не можем точно получить текущее время без API, поэтому просто инкрементируем
-        let currentTime = parseInt(localStorage.getItem(`ytTime_${v.id}`) || 0);
-        currentTime += 5;
-        videoTimeEl.textContent = `Время просмотра: ${formatTime(currentTime)}`;
-        localStorage.setItem(`ytTime_${v.id}`, currentTime);
-    }, 5000);
+        try {
+            playerIframe.contentWindow.postMessage('{"event":"listening","id":1,"channel":"widget"}', '*');
+        } catch {}
+    }, 500);
 }
 
-window.addEventListener("load", () => {
-    const last = localStorage.getItem("ytLastVideo");
-    if(last && videoMap.has(last)){
-        loadVideo(videoMap.get(last));
+// Обработка сообщений от iframe
+window.addEventListener("message", (event) => {
+    if (!event.data) return;
+    let data = null;
+    try { data = JSON.parse(event.data); } catch {}
+    if (!data || typeof data.currentTime !== "number") return;
+    const rawTime = data.currentTime;
+    const flooredTime = Math.floor(rawTime / 5) * 5; // округляем до ближайшего 5
+    videoTimeEl.textContent = `Время просмотра: ${formatTime(flooredTime)}`;
+    if(currentVideoId){
+        localStorage.setItem(`ytTime_${currentVideoId}`, rawTime);
     }
 });
 </script>
 </body>
 </html>
+
 
