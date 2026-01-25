@@ -211,6 +211,8 @@ function init(){
     }
 
     renderTabs();
+    renderVideosSorted();
+    
     feeds.forEach(f=>channelStatus.set(f.name,"loading"));
     feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
 
@@ -354,3 +356,4 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
