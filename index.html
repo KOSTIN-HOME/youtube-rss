@@ -70,7 +70,6 @@ button, .btn {
 }
 button:hover, .btn:hover { background:#333; }
 
-
 input, textarea, .input {
     width:100%;
     padding:8px;
@@ -172,7 +171,7 @@ function getStorageKey(pass) {
 
 function parseFeedsInput(text){
     try {
-        return Function("return [" + text + "]")();
+        return JSON.parse("[" + text + "]");
     } catch {
         return null;
     }
@@ -224,14 +223,10 @@ u=>`https://cors.isomorphic-git.org/${u}`,
 u=>`https://thingproxy.freeboard.io/fetch/${u}`
 ];
 
-async function proxyFetch(url) {
-    const promises = proxies.map(p => 
-        fetch(p(url), { cache: "no-store" }).then(r => {
-            if (!r.ok) throw new Error();
-            return r;
-        })
+async function proxyFetch(url){
+    return Promise.any(
+        proxies.map(p => fetch(p(url), {cache:"no-store"}).then(r=>r.ok?r:Promise.reject()))
     );
-    return Promise.any(promises);
 }
 
 const tabsEl=document.getElementById("tabs");
@@ -270,7 +265,7 @@ function init(){
         videoMap.set(v.id, v);
     });
 
-    renderTabs();
+    updateTabs();
 
     feeds.forEach(f => channelStatus.set(f.name, "loading"));
     feeds.forEach(f => loadFeedWithRetries(f, maxRetries));
@@ -282,7 +277,7 @@ function init(){
 
 async function loadFeedWithRetries(feed) {
     channelStatus.set(feed.name, "loading");
-    finalizeTabs();
+    updateTabs();
 
     try {
         const r = await proxyFetch(feed.url);
@@ -293,7 +288,7 @@ async function loadFeedWithRetries(feed) {
         setTimeout(() => loadFeedWithRetries(feed), 10000);
         return;
     } finally {
-        finalizeTabs();
+        updateTabs();
         renderVideosSorted();
     }
 }
@@ -302,34 +297,15 @@ function checkNewVideos(){
     feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
 }
 
-function finalizeTabs(){
-    const all = tabsEl.querySelector('[data-channel="Все видео"]');
-    const tabs = [...tabsEl.querySelectorAll(".tab")].filter(t => t !== all);
-
-    tabs.sort((a,b) => channelOrder.get(a.dataset.channel) - channelOrder.get(b.dataset.channel));
-
+function updateTabs(){
     tabsEl.innerHTML = "";
-    tabsEl.appendChild(all);
-
-    tabs.forEach(t => {
-        const name = t.dataset.channel;
-        const status = channelStatus.get(name);
-
-        t.classList.remove("updating");
-
-        if (status === "loading" && channelStatus.get(name) === "loading") {
-            t.classList.add("updating");
-        }
-
-        tabsEl.appendChild(t);
-    });
-}
-
-
-function renderTabs(){
-    tabsEl.innerHTML="";
     tabsEl.appendChild(createTab("Все видео"));
-    feeds.forEach(f=>tabsEl.appendChild(createTab(f.name)));
+    feeds.sort((a,b) => channelOrder.get(a.name) - channelOrder.get(b.name))
+         .forEach(f => {
+             const t = createTab(f.name);
+             if(channelStatus.get(f.name) === "loading") t.classList.add("updating");
+             tabsEl.appendChild(t);
+         });
 }
 
 function createTab(name){
@@ -386,21 +362,7 @@ function renderVideosSorted(reset = true) {
     }
 
     let slice = videosToRender.slice(videosLoaded, videosLoaded + videosPerPage);
-    slice.forEach(v => {
-        const d = document.createElement("div");
-        d.className = "video" + (v.id===currentVideoId?" active":"");
-        d.dataset.videoId = v.id;
-        d.innerHTML = `
-            <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
-            <div>
-                <div class="title">${v.title}</div>
-                <div class="meta">
-                    ${v.channel} • ${v.date.toLocaleDateString("ru-RU")}
-                </div>
-            </div>`;
-        d.onclick = () => loadVideo(v);
-        feedEl.appendChild(d);
-    });
+    slice.forEach(v => feedEl.appendChild(createVideoCard(v)));
 
     videosLoaded += slice.length;
 
@@ -415,6 +377,20 @@ feedEl.addEventListener("scroll", () => {
     }
 });
 
+function createVideoCard(v){
+    const d = document.createElement("div");
+    d.className = "video" + (v.id===currentVideoId?" active":"");
+    d.dataset.videoId = v.id;
+    d.innerHTML = `
+        <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+        <div>
+            <div class="title">${v.title}</div>
+            <div class="meta">${v.channel} • ${v.date.toLocaleDateString("ru-RU")}</div>
+        </div>`;
+    d.onclick = () => loadVideo(v);
+    return d;
+}
+
 function loadVideo(v){
     playerIframe.src = `https://www.youtube.com/embed/${v.id}?playsinline=1&autoplay=1`;
     videoInfoEl.textContent = `${v.title} — ${v.channel}`;
@@ -428,6 +404,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
