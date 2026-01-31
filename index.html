@@ -113,42 +113,89 @@ button:hover, #tabs .tab:hover, #feed .video:hover {
     background: #555;
     color: #ccc;
 }
+
+#lockScreen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+#lockScreen .box {
+    background: var(--bg2);
+    padding: 20px;
+    border-radius: 12px;
+    min-width: 420px;
+}
+
+#lockScreen label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--sub);
+    font-size: 14px;
+}
+
+#lockScreen .row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+#lockScreen .row-large {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#lockScreen input,
+#lockScreen textarea {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #000;
+    color: #fff;
+    font-family: monospace;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+#lockScreen button {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #222;
+    color: #ccc;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
     
 </style>
 </head>
 
 <body>
 
-<div id="lockScreen" style="
-    position:fixed;
-    inset:0;
-    background:#0f0f0f;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:9999;
-">
-    <div>
-
-        <div style="margin-bottom:8px;color:#aaa">Пароль</div>
-
-        <div style="display:flex;gap:8px;margin-bottom:12px">
+<div id="lockScreen">
+    <div class="box">
+        <label for="passwordInput">Пароль</label>
+        <div class="row">
             <input id="passwordInput" type="password">
             <button id="loginBtn">Войти</button>
         </div>
 
-        <div style="margin-bottom:6px;color:#aaa">
-            Каналы
-        </div>
+        <label for="feedsInput">Каналы</label>
+        <textarea id="feedsInput" rows="5" spellcheck="false"
+            placeholder='{url:"https://www.youtube.com/feeds/videos.xml?channel_id=...", name:"Channel"}'></textarea>
 
-        <textarea id="feedsInput" rows="5" spellcheck="false" placeholder='{url:"https://www.youtube.com/feeds/videos.xml?channel_id=...", name:"Channel"}'></textarea>
-
-        <div style="display:flex;gap:10px">
+        <div class="row-large">
             <button id="saveBtn">Записать</button>
             <button id="deleteBtn">Удалить</button>
         </div>
 
-        <div id="lockMsg" style="margin-top:10px;color:#aaa;font-size:13px"></div>
+        <div id="lockMsg"></div>
     </div>
 </div>
 
@@ -458,4 +505,5 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
