@@ -209,10 +209,8 @@ saveBtn.onclick = async () => {
 deleteBtn.onclick = async () => {
     const pass = passwordInput.value;
     localStorage.removeItem(getStorageKey());
-
-    localStorage.removeItem("ytVideos");
+    localStorage.removeItem(`ytVideos_${pass}`);
     localStorage.removeItem("ytLastVideo");
-
     lockMsg.textContent = "Каналы и кэш удалены";
 };
 
@@ -428,6 +426,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
