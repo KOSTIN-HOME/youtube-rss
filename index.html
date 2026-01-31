@@ -250,12 +250,15 @@ playerWrapper.appendChild(playerIframe);
 
 const videoMap=new Map();
 const channelStatus=new Map();
-let currentTab="Все видео";
-let currentVideoId = null;
 const maxRetries=2;
-let videosPerPage = 20;
-let videosLoaded = 0;
-let videosToRender = [];
+
+const state = {
+    currentTab: "Все видео",
+    currentVideoId: null,
+    videosPerPage: 20,
+    videosLoaded: 0,
+    videosToRender: []
+};
     
 function init(){
     if(!currentPassword) return;
@@ -315,11 +318,11 @@ function updateTabs(){
 
 function createTab(name){
     const t=document.createElement("div");
-    t.className="tab"+(name===currentTab?" active":"");
+    t.className="tab"+(name===state.currentTab?" active":"");
     t.dataset.channel=name;
     t.textContent=name;
     t.onclick=()=>{
-        currentTab=name;
+        state.currentTab=name;
         document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
         t.classList.add("active");
         renderVideosSorted();
@@ -360,23 +363,23 @@ function parseFeed(text,channel){
 function renderVideosSorted(reset = true) {
     if (reset) {
         feedEl.innerHTML = "";
-        videosLoaded = 0;
-        videosToRender = [...videoMap.values()]
-            .filter(v => currentTab === "Все видео" || v.channel === currentTab)
+        state.videosLoaded = 0;
+        state.videosToRender = [...videoMap.values()]
+            .filter(v => state.currentTab === "Все видео" || v.channel === state.currentTab)
             .sort((a, b) => b.date - a.date);
     }
 
-    let slice = videosToRender.slice(videosLoaded, videosLoaded + videosPerPage);
+    let slice = state.videosToRender.slice(state.videosLoaded, state.videosLoaded + state.videosPerPage);
     slice.forEach(v => feedEl.appendChild(createVideoCard(v)));
 
-    videosLoaded += slice.length;
+    state.videosLoaded += slice.length;
 
-    loaderEl.style.display = videosLoaded < videosToRender.length ? "block" : "none";
+    loaderEl.style.display = state.videosLoaded < state.videosToRender.length ? "block" : "none";
 }
 
 feedEl.addEventListener("scroll", () => {
     if (feedEl.scrollTop + feedEl.clientHeight >= feedEl.scrollHeight - 50) {
-        if (videosLoaded < videosToRender.length) {
+        if (state.videosLoaded < state.videosToRender.length) {
             renderVideosSorted(false);
         }
     }
@@ -384,7 +387,7 @@ feedEl.addEventListener("scroll", () => {
 
 function createVideoCard(v){
     const d = document.createElement("div");
-    d.className = "video" + (v.id===currentVideoId?" active":"");
+    d.className = "video" + (v.id===state.currentVideoId?" active":"");
     d.dataset.videoId = v.id;
     d.innerHTML = `
         <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
@@ -399,7 +402,7 @@ function createVideoCard(v){
 function loadVideo(v){
     playerIframe.src = `https://www.youtube.com/embed/${v.id}?playsinline=1&autoplay=1`;
     videoInfoEl.textContent = `${v.title} — ${v.channel}`;
-    currentVideoId = v.id;
+    state.currentVideoId = v.id;
 
     document.querySelectorAll(".video").forEach(x => x.classList.remove("active"));
     const el = document.querySelector(`.video[data-video-id="${v.id}"]`);
@@ -409,6 +412,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
