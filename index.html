@@ -317,9 +317,7 @@ function updateTabs(){
 }
 
 function createTab(name){
-    const t=document.createElement("div");
-    t.className="tab"+(name===state.currentTab?" active":"");
-    t.dataset.channel=name;
+    const t = el("div", "tab" + (name === state.currentTab ? " active" : ""), name);
     t.textContent=name;
     t.onclick=()=>{
         state.currentTab=name;
@@ -328,6 +326,13 @@ function createTab(name){
         renderVideosSorted();
     };
     return t;
+}
+
+function el(tag, cls, html){
+    const e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(html) e.innerHTML = html;
+    return e;
 }
 
 function parseFeed(text,channel){
@@ -412,6 +417,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
