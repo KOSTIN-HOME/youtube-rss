@@ -26,7 +26,6 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 #feedContainer{flex:1;display:flex;flex-direction:column;border-left:1px solid #222}
 #tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:var(--bg2);border-bottom:1px solid #222}
 .tab{padding:6px 12px;border-radius:8px;cursor:pointer;background:#222;color:var(--sub);font-size:14px;white-space:nowrap}
-.tab.active{background:var(--accent);color:#fff}
 .tab.loading::after{
     content:"";display:inline-block;margin-left:6px;width:12px;height:12px;
     border:2px solid var(--text);border-top-color:var(--accent);
@@ -43,17 +42,8 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
   animation-fill-mode: forwards; 
 }
 
-
 button {
     transition: background 0.2s ease;
-}
-    
-button:hover {
-    background: #333; /* лёгкое серое выделение */
-}
-
-.tab:hover {
-    background: #333;
 }
     
 #lockScreen button {
@@ -66,16 +56,25 @@ button:hover {
     transition: background 0.2s ease;
 }
     
-/* hover для кнопок */
-#lockScreen button:hover {
-    background: #333; /* лёгкое серое выделение */
+#lockScreen .box {
+    background: var(--bg2);
+    padding: 20px;
+    border-radius: 12px;
+    min-width: 420px;
 }
-    
-/* hover для textarea */
-#lockScreen textarea:hover {
-    border-color: #555; /* чуть более заметная рамка */
+
+#lockScreen input, #lockScreen textarea {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #000;
+    color: #fff;
+    font-family: monospace;
+    font-size: 13px;
+    box-sizing: border-box;
 }
-    
+   
 #retryFailed{
     margin:8px;
     padding:6px 10px;
@@ -102,30 +101,16 @@ button:hover {
     #feed {overflow-y:visible}
 }
 
-/* Основной цвет текста для кнопок и интерактивных элементов */
-button, #feed .video, #tabs .tab {
+button, #tabs .tab, #feed .video {
     color: #ccc;
-}
-
-/* Hover для кнопок и табов */
+}    
+    
 button:hover, #tabs .tab:hover, #feed .video:hover {
     background: #333;
 }
 
-/* Активный канал — серый, а не красный */
 #tabs .tab.active {
-    background: #555; /* можно выбрать чуть светлее или темнее серого */
-    color: #ccc;
-}
-
-/* Все каналы в списке одинакового цвета */
-#tabs .tab {
-    background: #222;   /* однообразный фон для всех */
-    color: #ccc;        /* единый цвет текста */
-}
-
-/* Видео — серый текст */
-#feed .video .title, #feed .video .meta {
+    background: #555;
     color: #ccc;
 }
     
@@ -134,7 +119,6 @@ button:hover, #tabs .tab:hover, #feed .video:hover {
 
 <body>
 
-<!-- Пункт 1: защита паролем -->
 <div id="lockScreen" style="
     position:fixed;
     inset:0;
@@ -144,19 +128,12 @@ button:hover, #tabs .tab:hover, #feed .video:hover {
     justify-content:center;
     z-index:9999;
 ">
-    <div style="background:#181818;padding:20px;border-radius:12px;min-width:420px">
+    <div>
 
         <div style="margin-bottom:8px;color:#aaa">Пароль</div>
 
         <div style="display:flex;gap:8px;margin-bottom:12px">
-            <input id="passwordInput" type="password" style="
-                flex:1;
-                padding:8px;
-                border-radius:8px;
-                border:1px solid #333;
-                background:#000;
-                color:#fff;
-            ">
+            <input id="passwordInput" type="password">
             <button id="loginBtn">Войти</button>
         </div>
 
@@ -164,18 +141,7 @@ button:hover, #tabs .tab:hover, #feed .video:hover {
             Каналы
         </div>
 
-        <textarea id="feedsInput" rows="5" spellcheck="false" style="
-            width:100%;
-            resize:vertical;
-            padding:8px;
-            border-radius:8px;
-            border:1px solid #333;
-            background:#000;
-            color:#fff;
-            font-family:monospace;
-            font-size:13px;
-            margin-bottom:10px;
-        " placeholder='{url:"https://www.youtube.com/feeds/videos.xml?channel_id=...", name:"Channel"}'></textarea>
+        <textarea id="feedsInput" rows="5" spellcheck="false" placeholder='{url:"https://www.youtube.com/feeds/videos.xml?channel_id=...", name:"Channel"}'></textarea>
 
         <div style="display:flex;gap:10px">
             <button id="saveBtn">Записать</button>
@@ -266,20 +232,11 @@ deleteBtn.onclick = async () => {
     const hash = await sha256(passwordInput.value);
     localStorage.removeItem(getStorageKey(hash));
 
-    // чистим видео, связанные с этими каналами
     localStorage.removeItem("ytVideos");
     localStorage.removeItem("ytLastVideo");
 
     lockMsg.textContent = "Каналы и кэш удалены";
 };
-
-
-passwordInput.addEventListener("input", async () => {
-    const hash = await sha256(passwordInput.value);
-    if (hash === PASSWORD_HASH) {
-        lockScreen.style.display = "none";
-    }
-});
 
 let channelOrder;
 
@@ -323,15 +280,12 @@ let videosLoaded = 0;
 let videosToRender = [];
 
 function init(){
-    if(!currentHash) return; // защита
+    if(!currentHash) return;
 
-    // Создаём порядок каналов
     channelOrder = new Map(feeds.map((f, i) => [f.name, i]));
 
-    // ---- Старая ошибка: очищаем videoMap и потом грузим с нуля ----
     videoMap.clear();
 
-    // Загружаем сохранённые видео из localStorage для текущего пароля
     const saved = JSON.parse(localStorage.getItem(`ytVideos_${currentHash}`) || "[]");
     saved.forEach(v => {
         v.date = new Date(v.date);
@@ -340,14 +294,11 @@ function init(){
 
     renderTabs();
 
-    // Ставим статус каналов "loading" и загружаем их с RSS
     feeds.forEach(f => channelStatus.set(f.name, "loading"));
     feeds.forEach(f => loadFeedWithRetries(f, maxRetries));
 
-    // Каждые 10 минут проверяем новые видео
     setInterval(checkNewVideos, 10*60*1000);
-
-    // Рендерим видео сразу из сохранённых
+    
     renderVideosSorted();
 }
 
@@ -386,10 +337,8 @@ function finalizeTabs(){
         const name = t.dataset.channel;
         const status = channelStatus.get(name);
 
-        // Убираем анимацию всегда, кроме текущей загрузки
         t.classList.remove("updating");
 
-        // Добавляем анимацию только если этот канал реально загружается
         if (status === "loading" && channelStatus.get(name) === "loading") {
             t.classList.add("updating");
         }
@@ -442,14 +391,13 @@ function parseFeed(text,channel){
         channelVideos.push(video);
     });
 
-    if(!currentHash) return; // защита
+    if(!currentHash) return;
     const saved = JSON.parse(localStorage.getItem(`ytVideos_${currentHash}`) || "[]");
     const otherVideos = saved.filter(v => v.channel !== channel);
     channelVideos.sort((a,b) => b.date - a.date);
     localStorage.setItem(`ytVideos_${currentHash}`, JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
 }
 
-// Рендер с подсветкой активного видео
 function renderVideosSorted(reset = true) {
     if (reset) {
         feedEl.innerHTML = "";
@@ -498,11 +446,9 @@ function loadVideo(v){
     const el = document.querySelector(`.video[data-video-id="${v.id}"]`);
     if(el) el.classList.add("active");
 
-    // Сохраняем последнее видео
     localStorage.setItem("ytLastVideo", v.id);
 }
 
-// Восстанавливаем последнее видео
 window.addEventListener("load", () => {
     const last = localStorage.getItem("ytLastVideo");
     if(last && videoMap.has(last)){
@@ -512,3 +458,4 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
