@@ -293,30 +293,6 @@ let videosPerPage = 20;
 let videosLoaded = 0;
 let videosToRender = [];
 
-// function init(){
-//     channelOrder = new Map(feeds.map((f, i) => [f.name, i]));
-    
-//     // Загружаем видео только для текущего пароля
-//     videoMap.clear(); // очищаем старые видео
-//     if(currentHash){
-//         const saved = localStorage.getItem(`ytVideos_${currentHash}`);
-//         if(saved){
-//             JSON.parse(saved).forEach(v=>{
-//                 v.date = new Date(v.date);
-//                 videoMap.set(v.id,v);
-//             });
-//         }
-//     }
-
-//     renderTabs();
-//     feeds.forEach(f=>channelStatus.set(f.name,"loading"));
-//     feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
-
-//     setInterval(checkNewVideos,10*60*1000);
-
-//     renderVideosSorted();
-// }
-
 function init(){
     if(!currentHash) return; // защита
 
@@ -436,11 +412,10 @@ function parseFeed(text,channel){
     });
 
     if(!currentHash) return; // защита
-    // Сохраняем только последние 20 видео на канал
-    const saved = JSON.parse(localStorage.getItem("ytVideos")||"[]");
-    const otherVideos = saved.filter(v=>v.channel!==channel);
-    channelVideos.sort((a,b)=>b.date-a.date);
-    localStorage.setItem("ytVideos",JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
+    const saved = JSON.parse(localStorage.getItem(`ytVideos_${currentHash}`) || "[]");
+    const otherVideos = saved.filter(v => v.channel !== channel);
+    channelVideos.sort((a,b) => b.date - a.date);
+    localStorage.setItem(`ytVideos_${currentHash}`, JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
 }
 
 // Рендер с подсветкой активного видео
@@ -506,6 +481,7 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
 
