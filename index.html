@@ -166,8 +166,8 @@ const deleteBtn = document.getElementById("deleteBtn");
 const feedsInput = document.getElementById("feedsInput");
 const lockMsg = document.getElementById("lockMsg");
 
-function getStorageKey() {
-    return `ytFeeds_plain`;
+function getStorageKey(pass) {
+    return `ytFeeds_${pass}`;
 }
 
 function parseFeedsInput(text){
@@ -180,9 +180,9 @@ function parseFeedsInput(text){
 
 loginBtn.onclick = () => {
     const pass = passwordInput.value;
-    const saved = localStorage.getItem(getStorageKey());
+    const saved = localStorage.getItem(getStorageKey(pass));
 
-    if(!saved){
+    if (!saved) {
         lockMsg.textContent = "Каналы для этого пароля не найдены";
         return;
     }
@@ -193,22 +193,22 @@ loginBtn.onclick = () => {
     init();
 };
 
-saveBtn.onclick = async () => {
+saveBtn.onclick = () => {
     const pass = passwordInput.value;
     const parsed = parseFeedsInput(feedsInput.value);
 
-    if(!parsed || !Array.isArray(parsed)){
+    if (!parsed || !Array.isArray(parsed)) {
         lockMsg.textContent = "Ошибка формата feeds";
         return;
     }
 
-    localStorage.setItem(getStorageKey(), JSON.stringify(parsed));
+    localStorage.setItem(getStorageKey(pass), JSON.stringify(parsed));
     lockMsg.textContent = "Каналы сохранены";
 };
 
-deleteBtn.onclick = async () => {
+deleteBtn.onclick = () => {
     const pass = passwordInput.value;
-    localStorage.removeItem(getStorageKey());
+    localStorage.removeItem(getStorageKey(pass));
     localStorage.removeItem(`ytVideos_${pass}`);
     localStorage.removeItem("ytLastVideo");
     lockMsg.textContent = "Каналы и кэш удалены";
@@ -426,6 +426,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
