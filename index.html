@@ -74,27 +74,78 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 
 <!-- Пункт 1: защита паролем -->
 <div id="lockScreen" style="
-position:fixed; inset:0; background:#0f0f0f;
-display:flex; align-items:center; justify-content:center; z-index:9999;">
-  <div style="background:#181818;padding:20px;border-radius:14px;max-width:520px;width:100%">
-    
-    <div style="display:flex;gap:10px">
-      <input id="passwordInput" type="password"
-        placeholder="Пароль"
-        style="flex:1;padding:10px;border-radius:8px;border:1px solid #333;background:#000;color:#fff">
-      <button id="loginBtn">Войти</button>
+    position:fixed;
+    inset:0;
+    background:#0f0f0f;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+">
+    <div style="background:#181818;padding:20px;border-radius:12px;min-width:420px">
+
+        <div style="margin-bottom:8px;color:#aaa">Пароль</div>
+
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input id="passwordInput" type="password" style="
+                flex:1;
+                padding:8px;
+                border-radius:8px;
+                border:1px solid #333;
+                background:#000;
+                color:#fff;
+            ">
+            <button id="loginBtn" style="
+                padding:8px 14px;
+                border-radius:8px;
+                border:1px solid #333;
+                background:#222;
+                color:#fff;
+                cursor:pointer;
+            ">Войти</button>
+        </div>
+
+        <div style="margin-bottom:6px;color:#aaa">
+            Каналы (массив feeds)
+        </div>
+
+        <textarea id="feedsInput" rows="5" style="
+            width:100%;
+            resize:vertical;
+            padding:8px;
+            border-radius:8px;
+            border:1px solid #333;
+            background:#000;
+            color:#fff;
+            font-family:monospace;
+            font-size:13px;
+            margin-bottom:10px;
+        " placeholder='{url:"https://www.youtube.com/feeds/videos.xml?channel_id=...", name:"Channel"}'></textarea>
+
+        <div style="display:flex;gap:10px">
+            <button id="saveBtn" style="
+                flex:1;
+                padding:8px;
+                border-radius:8px;
+                border:1px solid #333;
+                background:#2e7d32;
+                color:#fff;
+                cursor:pointer;
+            ">Записать</button>
+
+            <button id="deleteBtn" style="
+                flex:1;
+                padding:8px;
+                border-radius:8px;
+                border:1px solid #333;
+                background:#7d2e2e;
+                color:#fff;
+                cursor:pointer;
+            ">Удалить</button>
+        </div>
+
+        <div id="lockMsg" style="margin-top:10px;color:#aaa;font-size:13px"></div>
     </div>
-
-    <textarea id="feedsInput" placeholder='{url:"https://www.youtube.com/feeds/videos.xml?channel_id=XXX",name:"Channel"}'
-      style="margin-top:12px;width:100%;min-height:120px;
-      padding:10px;border-radius:10px;background:#000;color:#fff;border:1px solid #333;font-family:monospace"></textarea>
-
-    <div style="display:flex;gap:10px;margin-top:10px">
-      <button id="saveBtn">Записать</button>
-      <button id="deleteBtn">Удалить</button>
-    </div>
-
-  </div>
 </div>
 
 <div id="app">
@@ -110,7 +161,7 @@ display:flex; align-items:center; justify-content:center; z-index:9999;">
 </div>
 
 <script>
-    
+
 const lockScreen = document.getElementById("lockScreen");
 const passwordInput = document.getElementById("passwordInput");
 
@@ -129,6 +180,72 @@ async function sha256(text) {
         .map(b => b.toString(16).padStart(2, "0"))
         .join("");
 }
+
+let feeds = [];
+
+const loginBtn  = document.getElementById("loginBtn");
+const saveBtn   = document.getElementById("saveBtn");
+const deleteBtn = document.getElementById("deleteBtn");
+const feedsInput = document.getElementById("feedsInput");
+const lockMsg = document.getElementById("lockMsg");
+
+function getStorageKey(hash){
+    return `ytFeeds_${hash}`;
+}
+
+function parseFeedsInput(text){
+    try {
+        return Function("return [" + text + "]")();
+    } catch {
+        return null;
+    }
+}
+
+loginBtn.onclick = async () => {
+    const hash = await sha256(passwordInput.value);
+    const saved = localStorage.getItem(getStorageKey(hash));
+
+    if(!saved){
+        lockMsg.textContent = "Для этого пароля каналы не найдены";
+        return;
+    }
+
+    feeds = JSON.parse(saved);
+    lockScreen.style.display = "none";
+    init();
+};
+
+saveBtn.onclick = async () => {
+    const hash = await sha256(passwordInput.value);
+    const parsed = parseFeedsInput(feedsInput.value);
+
+    if(!parsed || !Array.isArray(parsed)){
+        lockMsg.textContent = "Ошибка формата feeds";
+        return;
+    }
+
+    localStorage.setItem(getStorageKey(hash), JSON.stringify(parsed));
+    lockMsg.textContent = "Каналы сохранены";
+};
+
+deleteBtn.onclick = async () => {
+    const hash = await sha256(passwordInput.value);
+    localStorage.removeItem(getStorageKey(hash));
+
+    // чистим видео, связанные с этими каналами
+    localStorage.removeItem("ytVideos");
+    localStorage.removeItem("ytLastVideo");
+
+    lockMsg.textContent = "Каналы и кэш удалены";
+};
+
+
+passwordInput.addEventListener("input", async () => {
+    const hash = await sha256(passwordInput.value);
+    if (hash === PASSWORD_HASH) {
+        lockScreen.style.display = "none";
+    }
+});
 
 const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
 
@@ -171,46 +288,8 @@ let videosPerPage = 20;
 let videosLoaded = 0;
 let videosToRender = [];
 
-// ===== PASSWORD + FEEDS STORAGE =====
-let feeds = [];
-
-const loginBtn = document.getElementById("loginBtn");
-const saveBtn  = document.getElementById("saveBtn");
-const deleteBtn= document.getElementById("deleteBtn");
-const feedsInput = document.getElementById("feedsInput");
-
-loginBtn.onclick = async () => {
-  const hash = await sha256(passwordInput.value);
-  const saved = localStorage.getItem("ytFeeds:" + hash);
-  if (!saved) {
-    alert("Для этого пароля каналы не найдены");
-    return;
-  }
-  feeds = JSON.parse(saved);
-  lockScreen.style.display = "none";
-};
-
-saveBtn.onclick = async () => {
-  const hash = await sha256(passwordInput.value);
-  try {
-    const parsed = eval("[" + feedsInput.value + "]");
-    localStorage.setItem("ytFeeds:" + hash, JSON.stringify(parsed));
-    alert("Каналы сохранены");
-  } catch {
-    alert("Ошибка формата feeds");
-  }
-};
-
-deleteBtn.onclick = async () => {
-  const hash = await sha256(passwordInput.value);
-  localStorage.removeItem("ytFeeds:" + hash);
-  localStorage.removeItem("ytVideos");
-  alert("Каналы удалены");
-};
-// ===== END STORAGE =====
-    
 init();
-    
+
 function init(){
     const saved = localStorage.getItem("ytVideos");
     if(saved){
