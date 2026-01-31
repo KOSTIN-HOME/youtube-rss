@@ -9,7 +9,6 @@
 <title>YouTube RSS Viewer</title>
 
 <style>
-/* === ТВОЙ CSS — НЕ ТРОНУТ === */
 :root {
     --bg:#0f0f0f;
     --bg2:#181818;
@@ -26,30 +25,37 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 #videoInfo{font-size:14px;color:var(--sub);min-height:20px}
 #feedContainer{flex:1;display:flex;flex-direction:column;border-left:1px solid #222}
 #tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:var(--bg2);border-bottom:1px solid #222}
-
-.tab {
-    padding:6px 12px;
-    border-radius:8px;
-    cursor:pointer;
-    background:#222;
-    color:var(--sub);
-    font-size:14px;
-    white-space:nowrap;
-    transition: background 0.2s, color 0.2s;
+.tab{padding:6px 12px;border-radius:8px;cursor:pointer;background:#222;color:var(--sub);font-size:14px;white-space:nowrap}
+.tab.active{background:var(--accent);color:#fff}
+.tab.loading::after{
+    content:"";display:inline-block;margin-left:6px;width:12px;height:12px;
+    border:2px solid var(--text);border-top-color:var(--accent);
+    border-radius:50%;animation:spin .8s linear infinite
 }
-.tab:hover { background:#333;color:#fff }
-.tab.active { background:var(--activeVideo);color:#fff }
-
+@keyframes spin{to{transform:rotate(360deg)}}
 @keyframes blinkGreen {
   0%, 100% { color: #8BC34A; opacity: 1; }
   50% { color: #C5E1A5; opacity: 0.5; }
 }
-.tab.updating { animation: blinkGreen 1s infinite }
+
+.tab.updating {
+  animation: blinkGreen 1s infinite;
+}
+
+#retryFailed{
+    margin:8px;
+    padding:6px 10px;
+    background:#222;
+    color:#fff;
+    border:1px solid #333;
+    border-radius:8px;
+    cursor:pointer;
+}
 
 #feed{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
 .video{display:flex;gap:12px;padding:10px;border-radius:12px;cursor:pointer;background:var(--bg2)}
 .video:hover{background:#333}
-.video.active{background:var(--activeVideo)}
+.video.active{background:var(--activeVideo);}
 .thumb{width:168px;aspect-ratio:16/9;border-radius:10px;object-fit:cover}
 .title{font-size:15px;font-weight:500}
 .meta{font-size:13px;color:var(--sub);margin-top:6px}
@@ -61,64 +67,42 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
     #feedContainer {flex:none;border-left:none;border-top:1px solid #222}
     #feed {overflow-y:visible}
 }
-
-/* === ДОБАВЛЕНО: экран профилей === */
-#lockScreen{
-    position:fixed;inset:0;background:#0f0f0f;
-    display:flex;align-items:center;justify-content:center;
-    z-index:9999;
-}
-#loginBox{
-    background:#181818;padding:20px;border-radius:14px;
-    width:420px;display:flex;flex-direction:column;gap:10px;
-}
-#passRow{display:flex;gap:10px}
-#passwordInput{
-    flex:1;padding:8px;border-radius:8px;
-    border:1px solid #333;background:#000;color:#fff;
-}
-button{
-    padding:8px 14px;border-radius:8px;
-    background:#222;color:#fff;border:1px solid #333;
-    cursor:pointer;
-}
-button:hover{background:#333}
-#loginBtn{background:var(--accent);border:none}
-#feedsInput{
-    width:100%;height:160px;
-    background:#000;color:#fff;
-    border:1px solid #333;border-radius:8px;
-    padding:8px;font-family:monospace;font-size:13px;
-}
-#actionRow{display:flex;gap:10px}
 </style>
 </head>
 
 <body>
 
-<!-- === ДОБАВЛЕНО: экран входа === -->
-<div id="lockScreen">
-    <div id="loginBox">
-        <div id="passRow">
-            <input id="passwordInput" type="password" placeholder="Пароль">
-            <button id="loginBtn">Войти</button>
-        </div>
-        <textarea id="feedsInput" placeholder='
-{url:"https://www.youtube.com/feeds/videos.xml?channel_id=...",name:"Channel"}
-'></textarea>
-        <div id="actionRow">
-            <button id="saveBtn">Записать</button>
-            <button id="deleteBtn">Удалить</button>
-        </div>
+<!-- Пункт 1: защита паролем -->
+<div id="lockScreen" style="
+position:fixed; inset:0; background:#0f0f0f;
+display:flex; align-items:center; justify-content:center; z-index:9999;">
+  <div style="background:#181818;padding:20px;border-radius:14px;max-width:520px;width:100%">
+    
+    <div style="display:flex;gap:10px">
+      <input id="passwordInput" type="password"
+        placeholder="Пароль"
+        style="flex:1;padding:10px;border-radius:8px;border:1px solid #333;background:#000;color:#fff">
+      <button id="loginBtn">Войти</button>
     </div>
+
+    <textarea id="feedsInput" placeholder='{url:"https://www.youtube.com/feeds/videos.xml?channel_id=XXX",name:"Channel"}'
+      style="margin-top:12px;width:100%;min-height:120px;
+      padding:10px;border-radius:10px;background:#000;color:#fff;border:1px solid #333;font-family:monospace"></textarea>
+
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button id="saveBtn">Записать</button>
+      <button id="deleteBtn">Удалить</button>
+    </div>
+
+  </div>
 </div>
 
-<!-- === ТВОЁ ПРИЛОЖЕНИЕ — НЕ МЕНЯЛ === -->
 <div id="app">
 <div id="player">
     <div id="videoInfo">Выберите видео</div>
     <div class="player-wrapper" id="playerWrapper"></div>
 </div>
+
 <div id="feedContainer">
     <div id="tabs"></div>
     <div id="feed"><div id="loader">Подготовка…</div></div>
@@ -126,57 +110,27 @@ button:hover{background:#333}
 </div>
 
 <script>
-/* ================================
-   === ДОБАВЛЕНО: ПРОФИЛИ ==========
-   ================================ */
+    
+const lockScreen = document.getElementById("lockScreen");
+const passwordInput = document.getElementById("passwordInput");
 
-let feeds = [];
-let CURRENT_PASSWORD_HASH = null;
-const PROFILES_KEY = "ytProfiles";
+window.addEventListener("load", () => passwordInput.focus());
 
-async function sha256(text){
-    const d = new TextEncoder().encode(text);
-    const h = await crypto.subtle.digest("SHA-256", d);
-    return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("");
+passwordInput.addEventListener("blur", () => {
+    if (lockScreen.style.display !== "none") {
+        setTimeout(() => passwordInput.focus(), 0);
+    }
+});
+
+async function sha256(text) {
+    const data = new TextEncoder().encode(text);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    return [...new Uint8Array(hashBuffer)]
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
 }
-function getProfiles(){
-    return JSON.parse(localStorage.getItem(PROFILES_KEY)||"{}");
-}
-function saveProfiles(p){
-    localStorage.setItem(PROFILES_KEY, JSON.stringify(p));
-}
 
-loginBtn.onclick = async ()=>{
-    const h = await sha256(passwordInput.value);
-    const profiles = getProfiles();
-    if(!profiles[h]) return alert("Профиль не найден");
-    CURRENT_PASSWORD_HASH = h;
-    feeds = profiles[h].feeds;
-    startApp();
-};
-
-saveBtn.onclick = async ()=>{
-    let parsed;
-    try{ parsed = eval("["+feedsInput.value+"]"); }
-    catch{ return alert("Ошибка формата feeds"); }
-    const h = await sha256(passwordInput.value);
-    const profiles = getProfiles();
-    profiles[h] = { feeds: parsed };
-    saveProfiles(profiles);
-    alert("Сохранено");
-};
-
-deleteBtn.onclick = async ()=>{
-    const h = await sha256(passwordInput.value);
-    const profiles = getProfiles();
-    delete profiles[h];
-    saveProfiles(profiles);
-    alert("Удалено");
-};
-
-/* ================================
-   === ДАЛЬШЕ ТВОЙ JS — 1:1 =======
-   ================================ */
+const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
 
 const proxies=[
 u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -217,16 +171,47 @@ let videosPerPage = 20;
 let videosLoaded = 0;
 let videosToRender = [];
 
-function startApp(){
-    lockScreen.style.display="none";
-    app.style.display="flex";
-    init();
-}
+// ===== PASSWORD + FEEDS STORAGE =====
+let feeds = [];
 
-/* init, loadFeedWithRetries, renderTabs, parseFeed,
-   renderVideosSorted, loadVideo — БЕЗ ИЗМЕНЕНИЙ */
+const loginBtn = document.getElementById("loginBtn");
+const saveBtn  = document.getElementById("saveBtn");
+const deleteBtn= document.getElementById("deleteBtn");
+const feedsInput = document.getElementById("feedsInput");
 
-init = function(){
+loginBtn.onclick = async () => {
+  const hash = await sha256(passwordInput.value);
+  const saved = localStorage.getItem("ytFeeds:" + hash);
+  if (!saved) {
+    alert("Для этого пароля каналы не найдены");
+    return;
+  }
+  feeds = JSON.parse(saved);
+  lockScreen.style.display = "none";
+};
+
+saveBtn.onclick = async () => {
+  const hash = await sha256(passwordInput.value);
+  try {
+    const parsed = eval("[" + feedsInput.value + "]");
+    localStorage.setItem("ytFeeds:" + hash, JSON.stringify(parsed));
+    alert("Каналы сохранены");
+  } catch {
+    alert("Ошибка формата feeds");
+  }
+};
+
+deleteBtn.onclick = async () => {
+  const hash = await sha256(passwordInput.value);
+  localStorage.removeItem("ytFeeds:" + hash);
+  localStorage.removeItem("ytVideos");
+  alert("Каналы удалены");
+};
+// ===== END STORAGE =====
+    
+init();
+    
+function init(){
     const saved = localStorage.getItem("ytVideos");
     if(saved){
         JSON.parse(saved).forEach(v=>{
@@ -238,11 +223,169 @@ init = function(){
     renderTabs();
     feeds.forEach(f=>channelStatus.set(f.name,"loading"));
     feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
-    setInterval(checkNewVideos,10*60*1000);
-    renderVideosSorted();
-};
 
-/* остальной код полностью сохранён */
+    setInterval(checkNewVideos,10*60*1000);
+
+    // Рендерим "Все видео" сразу
+    renderVideosSorted();
+}
+
+async function loadFeedWithRetries(feed) {
+    channelStatus.set(feed.name, "loading");
+    finalizeTabs();
+
+    try {
+        const r = await proxyFetch(feed.url);
+        const t = await r.text();
+        parseFeed(t, feed.name);
+        channelStatus.set(feed.name, "loaded");
+    } catch (err) {
+        setTimeout(() => loadFeedWithRetries(feed), 10000);
+        return;
+    } finally {
+        finalizeTabs();
+        renderVideosSorted();
+    }
+}
+
+function checkNewVideos(){
+    feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
+}
+
+function finalizeTabs(){
+    const all = tabsEl.querySelector('[data-channel="Все видео"]');
+    const tabs = [...tabsEl.querySelectorAll(".tab")].filter(t => t !== all);
+
+    tabs.sort((a,b) => channelOrder.get(a.dataset.channel) - channelOrder.get(b.dataset.channel));
+
+    tabsEl.innerHTML = "";
+    tabsEl.appendChild(all);
+
+    tabs.forEach(t => {
+        const name = t.dataset.channel;
+        const status = channelStatus.get(name);
+
+        t.classList.remove("updating");
+        if(status === "loading"){
+            t.classList.add("updating");
+        } else {
+            t.style.color = "#aaa";
+        }
+
+        tabsEl.appendChild(t);
+    });
+}
+
+function renderTabs(){
+    tabsEl.innerHTML="";
+    tabsEl.appendChild(createTab("Все видео"));
+    feeds.forEach(f=>tabsEl.appendChild(createTab(f.name)));
+}
+
+function createTab(name){
+    const t=document.createElement("div");
+    t.className="tab"+(name===currentTab?" active":"");
+    t.dataset.channel=name;
+    t.textContent=name;
+    t.onclick=()=>{
+        currentTab=name;
+        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+        t.classList.add("active");
+        renderVideosSorted();
+    };
+    return t;
+}
+
+function parseFeed(text,channel){
+    const xml=new DOMParser().parseFromString(text,"text/xml");
+    let channelVideos = [];
+
+    xml.querySelectorAll("entry").forEach(e=>{
+        let id=e.querySelector("yt\\:videoId")?.textContent;
+        if(!id){
+            const link=e.querySelector("link")?.getAttribute("href")||"";
+            const m=link.match(/v=([^&]+)/);
+            if(m) id=m[1];
+        }
+        if(!id) return;
+
+        const video={
+            id,
+            title:e.querySelector("title")?.textContent||"",
+            channel,
+            date:new Date(e.querySelector("published")?.textContent)
+        };
+        videoMap.set(id,video);
+        channelVideos.push(video);
+    });
+
+    // Сохраняем только последние 20 видео на канал
+    const saved = JSON.parse(localStorage.getItem("ytVideos")||"[]");
+    const otherVideos = saved.filter(v=>v.channel!==channel);
+    channelVideos.sort((a,b)=>b.date-a.date);
+    localStorage.setItem("ytVideos",JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
+}
+
+// Рендер с подсветкой активного видео
+function renderVideosSorted(reset = true) {
+    if (reset) {
+        feedEl.innerHTML = "";
+        videosLoaded = 0;
+        videosToRender = [...videoMap.values()]
+            .filter(v => currentTab === "Все видео" || v.channel === currentTab)
+            .sort((a, b) => b.date - a.date);
+    }
+
+    let slice = videosToRender.slice(videosLoaded, videosLoaded + videosPerPage);
+    slice.forEach(v => {
+        const d = document.createElement("div");
+        d.className = "video" + (v.id===currentVideoId?" active":"");
+        d.dataset.videoId = v.id;
+        d.innerHTML = `
+            <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
+            <div>
+                <div class="title">${v.title}</div>
+                <div class="meta">
+                    ${v.channel} • ${v.date.toLocaleDateString("ru-RU")}
+                </div>
+            </div>`;
+        d.onclick = () => loadVideo(v);
+        feedEl.appendChild(d);
+    });
+
+    videosLoaded += slice.length;
+
+    loaderEl.style.display = videosLoaded < videosToRender.length ? "block" : "none";
+}
+
+feedEl.addEventListener("scroll", () => {
+    if (feedEl.scrollTop + feedEl.clientHeight >= feedEl.scrollHeight - 50) {
+        if (videosLoaded < videosToRender.length) {
+            renderVideosSorted(false);
+        }
+    }
+});
+
+function loadVideo(v){
+    playerIframe.src = `https://www.youtube.com/embed/${v.id}?playsinline=1&autoplay=1`;
+    videoInfoEl.textContent = `${v.title} — ${v.channel}`;
+    currentVideoId = v.id;
+
+    document.querySelectorAll(".video").forEach(x => x.classList.remove("active"));
+    const el = document.querySelector(`.video[data-video-id="${v.id}"]`);
+    if(el) el.classList.add("active");
+
+    // Сохраняем последнее видео
+    localStorage.setItem("ytLastVideo", v.id);
+}
+
+// Восстанавливаем последнее видео
+window.addEventListener("load", () => {
+    const last = localStorage.getItem("ytLastVideo");
+    if(last && videoMap.has(last)){
+        loadVideo(videoMap.get(last));
+    }
+});
 </script>
 </body>
 </html>
