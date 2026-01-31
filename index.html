@@ -157,16 +157,8 @@ const passwordInput = document.getElementById("passwordInput");
 
 window.addEventListener("load", () => passwordInput.focus());
 
-async function sha256(text) {
-    const data = new TextEncoder().encode(text);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    return [...new Uint8Array(hashBuffer)]
-        .map(b => b.toString(16).padStart(2, "0"))
-        .join("");
-}
-
 let feeds = [];
-let currentHash = null;
+let currentPassword = "";
     
 const loginBtn  = document.getElementById("loginBtn");
 const saveBtn   = document.getElementById("saveBtn");
@@ -174,8 +166,8 @@ const deleteBtn = document.getElementById("deleteBtn");
 const feedsInput = document.getElementById("feedsInput");
 const lockMsg = document.getElementById("lockMsg");
 
-function getStorageKey(hash){
-    return `ytFeeds_${hash}`;
+function getStorageKey() {
+    return `ytFeeds_plain`;
 }
 
 function parseFeedsInput(text){
@@ -186,23 +178,23 @@ function parseFeedsInput(text){
     }
 }
 
-loginBtn.onclick = async () => {
-    const hash = await sha256(passwordInput.value);
-    const saved = localStorage.getItem(getStorageKey(hash));
+loginBtn.onclick = () => {
+    const pass = passwordInput.value;
+    const saved = localStorage.getItem(getStorageKey());
 
     if(!saved){
-        lockMsg.textContent = "Для этого пароля каналы не найдены";
+        lockMsg.textContent = "Каналы для этого пароля не найдены";
         return;
     }
 
     feeds = JSON.parse(saved);
-    currentHash = hash;
+    currentPassword = pass;
     lockScreen.style.display = "none";
     init();
 };
 
 saveBtn.onclick = async () => {
-    const hash = await sha256(passwordInput.value);
+    const pass = passwordInput.value;
     const parsed = parseFeedsInput(feedsInput.value);
 
     if(!parsed || !Array.isArray(parsed)){
@@ -210,13 +202,13 @@ saveBtn.onclick = async () => {
         return;
     }
 
-    localStorage.setItem(getStorageKey(hash), JSON.stringify(parsed));
+    localStorage.setItem(getStorageKey(), JSON.stringify(parsed));
     lockMsg.textContent = "Каналы сохранены";
 };
 
 deleteBtn.onclick = async () => {
-    const hash = await sha256(passwordInput.value);
-    localStorage.removeItem(getStorageKey(hash));
+    const pass = passwordInput.value;
+    localStorage.removeItem(getStorageKey());
 
     localStorage.removeItem("ytVideos");
     localStorage.removeItem("ytLastVideo");
@@ -266,13 +258,13 @@ let videosLoaded = 0;
 let videosToRender = [];
 
 function init(){
-    if(!currentHash) return;
+    if(!currentPassword) return;
 
     channelOrder = new Map(feeds.map((f, i) => [f.name, i]));
 
     videoMap.clear();
 
-    const saved = JSON.parse(localStorage.getItem(`ytVideos_${currentHash}`) || "[]");
+    const saved = JSON.parse(localStorage.getItem(`ytVideos_${currentPassword}`) || "[]");
     saved.forEach(v => {
         v.date = new Date(v.date);
         videoMap.set(v.id, v);
@@ -377,11 +369,11 @@ function parseFeed(text,channel){
         channelVideos.push(video);
     });
 
-    if(!currentHash) return;
-    const saved = JSON.parse(localStorage.getItem(`ytVideos_${currentHash}`) || "[]");
+    if(!currentPassword) return;
+    const saved = JSON.parse(localStorage.getItem(`ytVideos_${currentPassword}`) || "[]");
     const otherVideos = saved.filter(v => v.channel !== channel);
     channelVideos.sort((a,b) => b.date - a.date);
-    localStorage.setItem(`ytVideos_${currentHash}`, JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
+    localStorage.setItem(`ytVideos_${currentPassword}`, JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
 }
 
 function renderVideosSorted(reset = true) {
@@ -432,18 +424,11 @@ function loadVideo(v){
     const el = document.querySelector(`.video[data-video-id="${v.id}"]`);
     if(el) el.classList.add("active");
 
-    localStorage.setItem("ytLastVideo", v.id);
 }
-
-window.addEventListener("load", () => {
-    const last = localStorage.getItem("ytLastVideo");
-    if(last && videoMap.has(last)){
-        loadVideo(videoMap.get(last));
-    }
-});
 </script>
 </body>
 </html>
+
 
 
 
