@@ -388,7 +388,9 @@ function finalizeTabs(){
 
         t.classList.remove("updating");
         if(status === "loading"){
-            t.classList.add("updating");
+            if (!t.classList.contains("updating")) {
+                t.classList.add("updating"); // добавляем только если ещё нет
+            }
         } else {
             t.style.color = "#aaa";
         }
@@ -510,6 +512,7 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
 
