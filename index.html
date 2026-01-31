@@ -33,13 +33,13 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
     border-radius:50%;animation:spin .8s linear infinite
 }
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes blinkGreen {
-  0%, 100% { color: #8BC34A; opacity: 1; }
-  50% { color: #C5E1A5; opacity: 0.5; }
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .tab.updating {
-  animation: blinkGreen 1s infinite;
+  animation: blink 1s infinite;
 }
 
 button {
@@ -508,6 +508,7 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
 
