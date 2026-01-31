@@ -167,12 +167,6 @@ const passwordInput = document.getElementById("passwordInput");
 
 window.addEventListener("load", () => passwordInput.focus());
 
-passwordInput.addEventListener("blur", () => {
-    if (lockScreen.style.display !== "none") {
-        setTimeout(() => passwordInput.focus(), 0);
-    }
-});
-
 async function sha256(text) {
     const data = new TextEncoder().encode(text);
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -247,7 +241,7 @@ passwordInput.addEventListener("input", async () => {
     }
 });
 
-const channelOrder = new Map(feeds.map((f,i)=>[f.name,i]));
+let channelOrder;
 
 const proxies=[
 u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -288,9 +282,12 @@ let videosPerPage = 20;
 let videosLoaded = 0;
 let videosToRender = [];
 
-init();
-
 function init(){
+
+    channelOrder = new Map(
+        feeds.map((f, i) => [f.name, i])
+    );
+    
     const saved = localStorage.getItem("ytVideos");
     if(saved){
         JSON.parse(saved).forEach(v=>{
@@ -468,3 +465,4 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
