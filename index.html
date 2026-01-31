@@ -55,12 +55,7 @@ button:hover {
 }
 
 #lockScreen textarea {
-    outline: none;           /* убирает контур при фокусе */
-    box-shadow: none;        /* убирает красную подсветку браузера */
-}
-
-#lockScreen textarea:invalid {
-    box-shadow: none;
+    spellcheck: false;      /* отключает красные волнистые линии */
 }
     
 #lockScreen button {
@@ -489,6 +484,7 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
 
