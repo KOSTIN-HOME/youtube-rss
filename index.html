@@ -386,12 +386,11 @@ function finalizeTabs(){
         const name = t.dataset.channel;
         const status = channelStatus.get(name);
 
-        // Убираем анимацию только если статус загружен
-        if(status === "loaded"){
-            t.classList.remove("updating");
-        }
-        // Добавляем анимацию только если статус loading и класс ещё не стоит
-        else if(status === "loading" && !t.classList.contains("updating")){
+        // Убираем анимацию всегда, кроме текущей загрузки
+        t.classList.remove("updating");
+
+        // Добавляем анимацию только если этот канал реально загружается
+        if (status === "loading" && channelStatus.get(name) === "loading") {
             t.classList.add("updating");
         }
 
@@ -513,6 +512,7 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
 
