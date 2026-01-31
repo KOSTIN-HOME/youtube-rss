@@ -54,11 +54,21 @@ button:hover {
     background: #333;
 }
 
+#lockScreen button {
+    padding:8px 14px;
+    border-radius:8px;
+    border:1px solid #333;
+    background:#222;
+    color:#fff;
+    cursor:pointer;
+    transition: background 0.2s ease;
+}
+    
 /* hover для кнопок */
 #lockScreen button:hover {
     background: #333; /* лёгкое серое выделение */
 }
-
+    
 /* hover для textarea */
 #lockScreen textarea:hover {
     border-color: #555; /* чуть более заметная рамка */
@@ -117,14 +127,7 @@ button:hover {
                 background:#000;
                 color:#fff;
             ">
-            <button id="loginBtn" style="
-                padding:8px 14px;
-                border-radius:8px;
-                border:1px solid #333;
-                background:#222;
-                color:#fff;
-                cursor:pointer;
-            ">Войти</button>
+            <button id="loginBtn">Войти</button>
         </div>
 
         <div style="margin-bottom:6px;color:#aaa">
@@ -494,6 +497,7 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
 
