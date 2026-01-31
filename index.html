@@ -180,43 +180,45 @@ function parseFeedsInput(text){
     }
 }
 
-loginBtn.onclick = () => {
-    const pass = passwordInput.value;
-    const saved = localStorage.getItem(storage.feeds(pass));
+const actions = {
 
-    if (!saved) {
-        lockMsg.textContent = "Каналы для этого пароля не найдены";
-        return;
+    login(){
+        const pass = passwordInput.value;
+        const saved = localStorage.getItem(storage.feeds(pass));
+
+        if(!saved)
+            return lockMsg.textContent = "Каналы для этого пароля не найдены";
+
+        feeds = JSON.parse(saved);
+        currentPassword = pass;
+        lockScreen.style.display = "none";
+        init();
+    },
+
+    save(){
+        const pass = passwordInput.value;
+        const parsed = parseFeedsInput(feedsInput.value);
+
+        if(!Array.isArray(parsed))
+            return lockMsg.textContent = "Ошибка формата feeds";
+
+        localStorage.setItem(storage.feeds(pass), JSON.stringify(parsed));
+        feedsInput.value = "";
+        lockMsg.textContent = "Каналы сохранены";
+    },
+
+    delete(){
+        const pass = passwordInput.value;
+        localStorage.removeItem(storage.feeds(pass));
+        localStorage.removeItem(storage.videos(pass));
+        localStorage.removeItem(storage.last);
+        lockMsg.textContent = "Каналы и кэш удалены";
     }
-
-    feeds = JSON.parse(saved);
-    currentPassword = pass;
-    lockScreen.style.display = "none";
-    init();
 };
 
-saveBtn.onclick = () => {
-    const pass = passwordInput.value;
-    const parsed = parseFeedsInput(feedsInput.value);
-
-    if (!parsed || !Array.isArray(parsed)) {
-        lockMsg.textContent = "Ошибка формата feeds";
-        return;
-    }
-
-    localStorage.setItem(storage.feeds(pass), JSON.stringify(parsed));
-    lockMsg.textContent = "Каналы сохранены";
-
-    feedsInput.value = "";
-};
-
-deleteBtn.onclick = () => {
-    const pass = passwordInput.value;
-    localStorage.removeItem(storage.feeds(pass));
-    localStorage.removeItem(storage.videos(pass));
-    localStorage.removeItem(storage.last);
-    lockMsg.textContent = "Каналы и кэш удалены";
-};
+loginBtn.onclick  = actions.login;
+saveBtn.onclick   = actions.save;
+deleteBtn.onclick = actions.delete;
 
 let channelOrder;
 
@@ -407,5 +409,6 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
