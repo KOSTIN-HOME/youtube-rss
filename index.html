@@ -53,10 +53,6 @@ button:hover {
 .tab:hover {
     background: #333;
 }
-
-#lockScreen textarea {
-    spellcheck: false;      /* отключает красные волнистые линии */
-}
     
 #lockScreen button {
     padding:8px 14px;
@@ -138,7 +134,7 @@ button:hover {
             Каналы
         </div>
 
-        <textarea id="feedsInput" rows="5" style="
+        <textarea id="feedsInput" rows="5" spellcheck="false" style="
             width:100%;
             resize:vertical;
             padding:8px;
@@ -484,6 +480,7 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
 
