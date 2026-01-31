@@ -99,6 +99,34 @@ button:hover {
     #feedContainer {flex:none;border-left:none;border-top:1px solid #222}
     #feed {overflow-y:visible}
 }
+
+/* Основной цвет текста для кнопок и интерактивных элементов */
+button, #feed .video, #tabs .tab {
+    color: #ccc;
+}
+
+/* Hover для кнопок и табов */
+button:hover, #tabs .tab:hover, #feed .video:hover {
+    background: #333;
+}
+
+/* Активный канал — серый, а не красный */
+#tabs .tab.active {
+    background: #555; /* можно выбрать чуть светлее или темнее серого */
+    color: #ccc;
+}
+
+/* Все каналы в списке одинакового цвета */
+#tabs .tab {
+    background: #222;   /* однообразный фон для всех */
+    color: #ccc;        /* единый цвет текста */
+}
+
+/* Видео — серый текст */
+#feed .video .title, #feed .video .meta {
+    color: #ccc;
+}
+    
 </style>
 </head>
 
@@ -480,6 +508,7 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
 
