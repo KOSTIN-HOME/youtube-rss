@@ -293,27 +293,56 @@ let videosPerPage = 20;
 let videosLoaded = 0;
 let videosToRender = [];
 
-function init(){
-    channelOrder = new Map(feeds.map((f, i) => [f.name, i]));
+// function init(){
+//     channelOrder = new Map(feeds.map((f, i) => [f.name, i]));
     
-    // Загружаем видео только для текущего пароля
-    videoMap.clear(); // очищаем старые видео
-    if(currentHash){
-        const saved = localStorage.getItem(`ytVideos_${currentHash}`);
-        if(saved){
-            JSON.parse(saved).forEach(v=>{
-                v.date = new Date(v.date);
-                videoMap.set(v.id,v);
-            });
-        }
-    }
+//     // Загружаем видео только для текущего пароля
+//     videoMap.clear(); // очищаем старые видео
+//     if(currentHash){
+//         const saved = localStorage.getItem(`ytVideos_${currentHash}`);
+//         if(saved){
+//             JSON.parse(saved).forEach(v=>{
+//                 v.date = new Date(v.date);
+//                 videoMap.set(v.id,v);
+//             });
+//         }
+//     }
+
+//     renderTabs();
+//     feeds.forEach(f=>channelStatus.set(f.name,"loading"));
+//     feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
+
+//     setInterval(checkNewVideos,10*60*1000);
+
+//     renderVideosSorted();
+// }
+
+function init(){
+    if(!currentHash) return; // защита
+
+    // Создаём порядок каналов
+    channelOrder = new Map(feeds.map((f, i) => [f.name, i]));
+
+    // ---- Старая ошибка: очищаем videoMap и потом грузим с нуля ----
+    videoMap.clear();
+
+    // Загружаем сохранённые видео из localStorage для текущего пароля
+    const saved = JSON.parse(localStorage.getItem(`ytVideos_${currentHash}`) || "[]");
+    saved.forEach(v => {
+        v.date = new Date(v.date);
+        videoMap.set(v.id, v);
+    });
 
     renderTabs();
-    feeds.forEach(f=>channelStatus.set(f.name,"loading"));
-    feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
 
-    setInterval(checkNewVideos,10*60*1000);
+    // Ставим статус каналов "loading" и загружаем их с RSS
+    feeds.forEach(f => channelStatus.set(f.name, "loading"));
+    feeds.forEach(f => loadFeedWithRetries(f, maxRetries));
 
+    // Каждые 10 минут проверяем новые видео
+    setInterval(checkNewVideos, 10*60*1000);
+
+    // Рендерим видео сразу из сохранённых
     renderVideosSorted();
 }
 
@@ -477,5 +506,6 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
