@@ -42,6 +42,15 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
   animation: blinkGreen 1s infinite;
 }
 
+button:hover {
+    background: #333; /* лёгкое серое выделение */
+}
+
+.tab:hover {
+    background: #333;
+}
+
+
 #retryFailed{
     margin:8px;
     padding:6px 10px;
@@ -176,7 +185,8 @@ async function sha256(text) {
 }
 
 let feeds = [];
-
+let currentHash = null;
+    
 const loginBtn  = document.getElementById("loginBtn");
 const saveBtn   = document.getElementById("saveBtn");
 const deleteBtn = document.getElementById("deleteBtn");
@@ -205,6 +215,7 @@ loginBtn.onclick = async () => {
     }
 
     feeds = JSON.parse(saved);
+    currentHash = hash;
     lockScreen.style.display = "none";
     init();
 };
@@ -283,17 +294,18 @@ let videosLoaded = 0;
 let videosToRender = [];
 
 function init(){
-
-    channelOrder = new Map(
-        feeds.map((f, i) => [f.name, i])
-    );
+    channelOrder = new Map(feeds.map((f, i) => [f.name, i]));
     
-    const saved = localStorage.getItem("ytVideos");
-    if(saved){
-        JSON.parse(saved).forEach(v=>{
-            v.date = new Date(v.date);
-            videoMap.set(v.id,v);
-        });
+    // Загружаем видео только для текущего пароля
+    videoMap.clear(); // очищаем старые видео
+    if(currentHash){
+        const saved = localStorage.getItem(`ytVideos_${currentHash}`);
+        if(saved){
+            JSON.parse(saved).forEach(v=>{
+                v.date = new Date(v.date);
+                videoMap.set(v.id,v);
+            });
+        }
     }
 
     renderTabs();
@@ -302,7 +314,6 @@ function init(){
 
     setInterval(checkNewVideos,10*60*1000);
 
-    // Рендерим "Все видео" сразу
     renderVideosSorted();
 }
 
@@ -395,6 +406,7 @@ function parseFeed(text,channel){
         channelVideos.push(video);
     });
 
+    if(!currentHash) return; // защита
     // Сохраняем только последние 20 видео на канал
     const saved = JSON.parse(localStorage.getItem("ytVideos")||"[]");
     const otherVideos = saved.filter(v=>v.channel!==channel);
@@ -465,4 +477,5 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
