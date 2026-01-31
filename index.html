@@ -42,6 +42,10 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
   animation: blinkGreen 1s infinite;
 }
 
+button {
+    transition: background 0.2s ease;
+}
+    
 button:hover {
     background: #333; /* лёгкое серое выделение */
 }
@@ -50,7 +54,16 @@ button:hover {
     background: #333;
 }
 
+/* hover для кнопок */
+#lockScreen button:hover {
+    background: #333; /* лёгкое серое выделение */
+}
 
+/* hover для textarea */
+#lockScreen textarea:hover {
+    border-color: #555; /* чуть более заметная рамка */
+}
+    
 #retryFailed{
     margin:8px;
     padding:6px 10px;
@@ -481,6 +494,7 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
 
