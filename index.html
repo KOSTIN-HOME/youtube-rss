@@ -151,19 +151,20 @@ input, textarea, .input {
 
 <script>
 
+const $ = id => document.getElementById(id);
+    
 const lockScreen    = $("lockScreen");
 const passwordInput = $("passwordInput");
-
-window.addEventListener("load", () => passwordInput.focus());
-
-let feeds = [];
-let currentPassword = "";
-    
 const loginBtn  = $("loginBtn");
 const saveBtn   = $("saveBtn");
 const deleteBtn = $("deleteBtn");
 const feedsInput = $("feedsInput");
 const lockMsg    = $("lockMsg");
+    
+window.addEventListener("load", () => passwordInput.focus());
+
+let feeds = [];
+let currentPassword = "";
 
 function getStorageKey(pass) {
     return `ytFeeds_${pass}`;
@@ -251,8 +252,6 @@ const maxRetries=2;
 let videosPerPage = 20;
 let videosLoaded = 0;
 let videosToRender = [];
-
-const $ = id => document.getElementById(id);
     
 function init(){
     if(!currentPassword) return;
@@ -406,4 +405,5 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
