@@ -204,6 +204,8 @@ saveBtn.onclick = () => {
 
     localStorage.setItem(getStorageKey(pass), JSON.stringify(parsed));
     lockMsg.textContent = "Каналы сохранены";
+
+    feedsInput.value = "";
 };
 
 deleteBtn.onclick = () => {
@@ -426,6 +428,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
