@@ -160,15 +160,17 @@ const saveBtn   = $("saveBtn");
 const deleteBtn = $("deleteBtn");
 const feedsInput = $("feedsInput");
 const lockMsg    = $("lockMsg");
+
+const storage = {
+    feeds:  pass => `ytFeeds_${pass}`,
+    videos: pass => `ytVideos_${pass}`,
+    last:   "ytLastVideo"
+};
     
 window.addEventListener("load", () => passwordInput.focus());
 
 let feeds = [];
 let currentPassword = "";
-
-function getStorageKey(pass) {
-    return `ytFeeds_${pass}`;
-}
 
 function parseFeedsInput(text){
     try {
@@ -180,7 +182,7 @@ function parseFeedsInput(text){
 
 loginBtn.onclick = () => {
     const pass = passwordInput.value;
-    const saved = localStorage.getItem(getStorageKey(pass));
+    const saved = localStorage.getItem(storage.feeds(pass));
 
     if (!saved) {
         lockMsg.textContent = "Каналы для этого пароля не найдены";
@@ -202,7 +204,7 @@ saveBtn.onclick = () => {
         return;
     }
 
-    localStorage.setItem(getStorageKey(pass), JSON.stringify(parsed));
+    localStorage.setItem(storage.feeds(pass), JSON.stringify(parsed));
     lockMsg.textContent = "Каналы сохранены";
 
     feedsInput.value = "";
@@ -210,9 +212,9 @@ saveBtn.onclick = () => {
 
 deleteBtn.onclick = () => {
     const pass = passwordInput.value;
-    localStorage.removeItem(getStorageKey(pass));
-    localStorage.removeItem(`ytVideos_${pass}`);
-    localStorage.removeItem("ytLastVideo");
+    localStorage.removeItem(storage.feeds(pass));
+    localStorage.removeItem(storage.videos(pass));
+    localStorage.removeItem(storage.last);
     lockMsg.textContent = "Каналы и кэш удалены";
 };
 
@@ -260,7 +262,7 @@ function init(){
 
     videoMap.clear();
 
-    const saved = JSON.parse(localStorage.getItem(`ytVideos_${currentPassword}`) || "[]");
+    const saved = JSON.parse(localStorage.getItem(storage.videos(currentPassword)) || "[]");
     saved.forEach(v => {
         v.date = new Date(v.date);
         videoMap.set(v.id, v);
@@ -347,10 +349,10 @@ function parseFeed(text,channel){
     });
 
     if(!currentPassword) return;
-    const saved = JSON.parse(localStorage.getItem(`ytVideos_${currentPassword}`) || "[]");
+    const saved = JSON.parse(localStorage.getItem(storage.videos(currentPassword)) || "[]");
     const otherVideos = saved.filter(v => v.channel !== channel);
     channelVideos.sort((a,b) => b.date - a.date);
-    localStorage.setItem(`ytVideos_${currentPassword}`, JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
+    localStorage.setItem(storage.videos(currentPassword), JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
 }
 
 function renderVideosSorted(reset = true) {
