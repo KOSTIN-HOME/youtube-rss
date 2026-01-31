@@ -35,12 +35,13 @@ body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes blinkText {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  50% { opacity: 0.6; }
 }
 
 .tab.updating {
-  animation: blinkText 1s infinite;
+  animation: blinkText 2s infinite; 
 }
+
 
 button {
     transition: background 0.2s ease;
@@ -508,6 +509,7 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
 
 
 
