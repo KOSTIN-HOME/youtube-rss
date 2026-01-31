@@ -228,13 +228,11 @@ u=>`https://cors.isomorphic-git.org/${u}`,
 u=>`https://thingproxy.freeboard.io/fetch/${u}`
 ];
 
-const proxyFetch = url =>
-    Promise.any(
-        proxies.map(p =>
-            fetch(p(url), { cache: "no-store" })
-                .then(r => r.ok && r)
-        )
+async function proxyFetch(url){
+    return Promise.any(
+        proxies.map(p => fetch(p(url), {cache:"no-store"}).then(r=>r.ok?r:Promise.reject()))
     );
+}
 
 const tabsEl=document.getElementById("tabs");
 const feedEl=document.getElementById("feed");
@@ -411,6 +409,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
