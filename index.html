@@ -276,6 +276,9 @@ const state = {
     videosLoaded: 0,
     videosToRender: []
 };
+
+let cachedSortedVideos = [];
+let cacheDirty = true;
     
 function init(){
     if(!currentPassword) return;
@@ -411,23 +414,37 @@ function parseFeed(text,channel){
     const otherVideos = saved.filter(v => v.channel !== channel);
     channelVideos.sort((a,b) => b.date - a.date);
     localStorage.setItem(storage.videos(currentPassword), JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
+    cacheDirty = true;
 }
 
 function renderVideosSorted(reset = true) {
+
+    if (cacheDirty) {
+        cachedSortedVideos = [...videoMap.values()]
+            .sort((a, b) => b.date - a.date);
+        cacheDirty = false;
+    }
+
     if (reset) {
         feedEl.innerHTML = "";
         state.videosLoaded = 0;
-        state.videosToRender = [...videoMap.values()]
-            .filter(v => state.currentTab === "Все видео" || v.channel === state.currentTab)
-            .sort((a, b) => b.date - a.date);
+
+        state.videosToRender = cachedSortedVideos.filter(v =>
+            state.currentTab === "Все видео" || v.channel === state.currentTab
+        );
     }
 
-    let slice = state.videosToRender.slice(state.videosLoaded, state.videosLoaded + state.videosPerPage);
+    const slice = state.videosToRender.slice(
+        state.videosLoaded,
+        state.videosLoaded + state.videosPerPage
+    );
+
     slice.forEach(v => feedEl.appendChild(createVideoCard(v)));
 
     state.videosLoaded += slice.length;
 
-    loaderEl.style.display = state.videosLoaded < state.videosToRender.length ? "block" : "none";
+    loaderEl.style.display =
+        state.videosLoaded < state.videosToRender.length ? "block" : "none";
 }
 
 feedEl.addEventListener("scroll", () => {
@@ -465,6 +482,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
