@@ -254,7 +254,7 @@ playerWrapper.appendChild(playerIframe);
 const videoMap=new Map();
 const channelStatus=new Map();
 const tabMap=new Map();
-const maxRetries=2;
+const maxRetries=10;
 
 const state = {
     currentTab: "Все видео",
@@ -288,7 +288,7 @@ function init(){
     renderVideosSorted();
 }
 
-async function loadFeedWithRetries(feed) {
+async function loadFeedWithRetries(feed, retries = maxRetries) {
     channelStatus.set(feed.name, "loading");
     updateTabs();
 
@@ -297,14 +297,21 @@ async function loadFeedWithRetries(feed) {
         const t = await r.text();
         parseFeed(t, feed.name);
         channelStatus.set(feed.name, "loaded");
-    } catch (err) {
-        setTimeout(() => loadFeedWithRetries(feed), 10000);
-        return;
+    } catch {
+        if (retries > 0) {
+            setTimeout(
+                () => loadFeedWithRetries(feed, retries - 1),
+                10000
+            );
+        } else {
+            channelStatus.set(feed.name, "error");
+        }
     } finally {
         updateTabs();
         renderVideosSorted();
     }
 }
+
 
 function checkNewVideos(){
     feeds.forEach(f=>loadFeedWithRetries(f,maxRetries));
@@ -445,6 +452,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
