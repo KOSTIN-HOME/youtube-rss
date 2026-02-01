@@ -126,7 +126,8 @@ input, textarea, .input {
 
         <label for="feedsInput">Каналы</label>
         <textarea id="feedsInput" rows="5" spellcheck="false"
-            placeholder='{url:"https://www.youtube.com/feeds/videos.xml?channel_id=...", name:"Channel"}'></textarea>
+            placeholder='[{"url":"https://www.youtube.com/feeds/videos.xml?channel_id=...","name":"Channel"}]'>
+        </textarea>
 
         <div class="row-large">
             <button id="saveBtn">Записать</button>
@@ -174,11 +175,13 @@ let currentPassword = "";
 
 function parseFeedsInput(text){
     try {
-        return Function("return [" + text + "]")();
+        const parsed = JSON.parse(text);
+        return Array.isArray(parsed) ? parsed : null;
     } catch {
         return null;
     }
 }
+
 
 const actions = {
 
@@ -417,6 +420,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
