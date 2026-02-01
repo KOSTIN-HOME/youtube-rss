@@ -172,6 +172,7 @@ window.addEventListener("load", () => passwordInput.focus());
 
 let feeds = [];
 let currentPassword = "";
+let activeVideoEl = null;
 
 function parseFeedsInput(text){
     try {
@@ -474,7 +475,18 @@ function loadVideo(v){
     videoInfoEl.textContent = `${v.title} — ${v.channel}`;
     state.currentVideoId = v.id;
 
-    document.querySelectorAll(".video").forEach(x => x.classList.remove("active"));
+    if (activeVideoEl) {
+        activeVideoEl.classList.remove("active");
+    }
+    
+    activeVideoEl = document.querySelector(
+        `.video[data-video-id="${v.id}"]`
+    );
+    
+    if (activeVideoEl) {
+        activeVideoEl.classList.add("active");
+    }
+
     const el = document.querySelector(`.video[data-video-id="${v.id}"]`);
     if(el) el.classList.add("active");
 
@@ -482,6 +494,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
