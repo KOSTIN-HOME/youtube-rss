@@ -269,6 +269,7 @@ const videoMap=new Map();
 const channelStatus=new Map();
 const tabMap=new Map();
 const maxRetries=10;
+const channelLastDate = new Map();
 
 const state = {
     currentTab: "Все видео",
@@ -388,6 +389,7 @@ function el(tag, cls, html){
 }
 
 function parseFeed(text,channel){
+    const lastKnownDate = channelLastDate.get(channel);
     const xml=new DOMParser().parseFromString(text,"text/xml");
     let channelVideos = [];
 
@@ -406,14 +408,20 @@ function parseFeed(text,channel){
             channel,
             date:new Date(e.querySelector("published")?.textContent)
         };
+        if (lastKnownDate && video.date <= lastKnownDate) return;
         videoMap.set(id,video);
         channelVideos.push(video);
     });
-
+    
     if(!currentPassword) return;
     const saved = JSON.parse(localStorage.getItem(storage.videos(currentPassword)) || "[]");
     const otherVideos = saved.filter(v => v.channel !== channel);
     channelVideos.sort((a,b) => b.date - a.date);
+
+    if (channelVideos.length) {
+        channelLastDate.set(channel, channelVideos[0].date);
+    }
+    
     localStorage.setItem(storage.videos(currentPassword), JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
     cacheDirty = true;
 }
@@ -479,21 +487,16 @@ function loadVideo(v){
         activeVideoEl.classList.remove("active");
     }
     
-    activeVideoEl = document.querySelector(
-        `.video[data-video-id="${v.id}"]`
-    );
-    
+    activeVideoEl = document.querySelector(`.video[data-video-id="${v.id}"]`);
     if (activeVideoEl) {
         activeVideoEl.classList.add("active");
     }
-
-    const el = document.querySelector(`.video[data-video-id="${v.id}"]`);
-    if(el) el.classList.add("active");
-
 }
+
 </script>
 </body>
 </html>
+
 
 
 
