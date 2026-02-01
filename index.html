@@ -253,6 +253,7 @@ playerWrapper.appendChild(playerIframe);
 
 const videoMap=new Map();
 const channelStatus=new Map();
+const tabMap=new Map();
 const maxRetries=2;
 
 const state = {
@@ -276,6 +277,7 @@ function init(){
         videoMap.set(v.id, v);
     });
 
+    initTabs();
     updateTabs();
 
     feeds.forEach(f => channelStatus.set(f.name, "loading"));
@@ -309,27 +311,50 @@ function checkNewVideos(){
 }
 
 function updateTabs(){
+    tabMap.forEach((tab, name) => {
+        tab.classList.toggle("active", name === state.currentTab);
+
+        if (name !== "Все видео") {
+            tab.classList.toggle(
+                "updating",
+                channelStatus.get(name) === "loading"
+            );
+        } else {
+            tab.classList.remove("updating");
+        }
+    });
+}
+
+
+function initTabs(){
     tabsEl.innerHTML = "";
-    tabsEl.appendChild(createTab("Все видео"));
-    feeds.sort((a,b) => channelOrder.get(a.name) - channelOrder.get(b.name))
-         .forEach(f => {
-             const t = createTab(f.name);
-             if(channelStatus.get(f.name) === "loading") t.classList.add("updating");
-             tabsEl.appendChild(t);
-         });
+    tabMap.clear();
+
+    const allTab = createTab("Все видео");
+    tabMap.set("Все видео", allTab);
+    tabsEl.appendChild(allTab);
+
+    feeds
+      .slice()
+      .sort((a,b)=>channelOrder.get(a.name)-channelOrder.get(b.name))
+      .forEach(f => {
+          const t = createTab(f.name);
+          tabMap.set(f.name, t);
+          tabsEl.appendChild(t);
+      });
 }
 
 function createTab(name){
     const t = el("div", "tab" + (name === state.currentTab ? " active" : ""), name);
-    t.textContent=name;
-    t.onclick=()=>{
-        state.currentTab=name;
-        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-        t.classList.add("active");
+    t.textContent = name;
+    t.onclick = () => {
+        state.currentTab = name;
+        updateTabs();
         renderVideosSorted();
     };
     return t;
 }
+
 
 function el(tag, cls, html){
     const e = document.createElement(tag);
@@ -420,6 +445,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
