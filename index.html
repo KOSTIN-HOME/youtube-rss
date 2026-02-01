@@ -231,11 +231,24 @@ u=>`https://cors.isomorphic-git.org/${u}`,
 u=>`https://thingproxy.freeboard.io/fetch/${u}`
 ];
 
+function fetchWithTimeout(url, timeout = 8000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+
+    return fetch(url, {
+        signal: controller.signal,
+        cache: "no-store"
+    }).finally(() => clearTimeout(id));
+}
+    
 async function proxyFetch(url){
     return Promise.any(
-        proxies.map(p => fetch(p(url), {cache:"no-store"}).then(r=>r.ok?r:Promise.reject()))
+        proxies.map(p =>
+            fetchWithTimeout(p(url)).then(r => r.ok ? r : Promise.reject())
+        )
     );
 }
+
 
 const tabsEl=document.getElementById("tabs");
 const feedEl=document.getElementById("feed");
@@ -452,6 +465,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
