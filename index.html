@@ -588,9 +588,22 @@ timeInputEl.addEventListener("change", () => {
     renderVideosSorted();
 });
 
+timeInputEl.addEventListener("input", e => {
+    let val = e.target.value.replace(/\D/g, ""); // оставляем только цифры
+
+    if (val.length > 4) val = val.slice(0,4); // максимум 4 цифры
+
+    if (val.length > 2) {
+        val = val.slice(0,2) + ":" + val.slice(2);
+    }
+
+    e.target.value = val;
+});
+
 </script>
 </body>
 </html>
+
 
 
 
