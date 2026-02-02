@@ -514,12 +514,20 @@ function createVideoCard(v){
         <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
         <div>
             <div class="title">${v.title}</div>
-            <div class="meta">${v.channel} • ${v.date.toLocaleDateString("ru-RU")}</div>
+            <div class="meta">${v.channel} • ${formatDateTime(v.date)}</div>
         </div>`;
     d.onclick = () => loadVideo(v);
     return d;
 }
 
+function formatDateTime(d){
+    return d.toLocaleDateString("ru-RU") + " " +
+           d.toLocaleTimeString("ru-RU", {
+               hour: "2-digit",
+               minute: "2-digit"
+           });
+}
+    
 function loadVideo(v){
     const savedTimes = JSON.parse(
         localStorage.getItem(storage.time(currentPassword)) || "{}"
@@ -559,6 +567,7 @@ timeInputEl.addEventListener("change", () => {
 </script>
 </body>
 </html>
+
 
 
 
