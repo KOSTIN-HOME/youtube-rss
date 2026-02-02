@@ -288,10 +288,18 @@ function init(){
     videoMap.clear();
 
     const saved = JSON.parse(localStorage.getItem(storage.videos(currentPassword)) || "[]");
+
     saved.forEach(v => {
-        v.date = new Date(v.date);
+        const d = new Date(v.date);
+        v.date = d;
         videoMap.set(v.id, v);
+    
+        const last = channelLastDate.get(v.channel);
+        if (!last || d > last) {
+            channelLastDate.set(v.channel, d);
+        }
     });
+
 
     initTabs();
     updateTabs();
@@ -420,7 +428,16 @@ function parseFeed(text,channel){
         channelLastDate.set(channel, channelVideos[0].date);
     }
     
-    localStorage.setItem(storage.videos(currentPassword), JSON.stringify([...otherVideos, ...channelVideos.slice(0,20)]));
+    const merged = new Map();
+
+    saved.forEach(v => merged.set(v.id, v));
+    channelVideos.forEach(v => merged.set(v.id, v));
+    
+    localStorage.setItem(
+        storage.videos(currentPassword),
+        JSON.stringify([...merged.values()])
+    );
+
     cacheDirty = true;
 }
 
@@ -494,6 +511,7 @@ function loadVideo(v){
 </script>
 </body>
 </html>
+
 
 
 
