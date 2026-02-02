@@ -111,6 +111,21 @@ input, textarea, .input {
     #feedContainer{flex:none;border-left:none;border-top:1px solid #222}
     #feed{overflow-y:visible}
 }
+
+.video-info-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#timeInput {
+    width: 64px;
+    text-align: center;
+    font-family: monospace;
+    font-size: 13px;
+    padding: 6px;
+}
+
 </style>
 </head>
 
@@ -138,7 +153,11 @@ input, textarea, .input {
 
 <div id="app">
 <div id="player">
-    <div id="videoInfo">Выберите видео</div>
+    <div id="videoInfo" class="video-info-row">
+        <span id="videoTitle">Выберите видео</span>
+        <input id="timeInput" type="text" placeholder="чч:мм" maxlength="5">
+    </div>
+    
     <div class="player-wrapper" id="playerWrapper"></div>
 </div>
 
@@ -163,8 +182,10 @@ const lockMsg    = $("lockMsg");
 const storage = {
     feeds:  pass => `ytFeeds_${pass}`,
     videos: pass => `ytVideos_${pass}`,
+    time:   pass => `ytTime_${pass}`,   // ← ВОТ СЮДА
     last:   "ytLastVideo"
 };
+
     
 window.addEventListener("load", () => passwordInput.focus());
 
@@ -253,7 +274,8 @@ const tabsEl=document.getElementById("tabs");
 const feedEl=document.getElementById("feed");
 const loaderEl=document.getElementById("loader");
 const playerWrapper=document.getElementById("playerWrapper");
-const videoInfoEl=document.getElementById("videoInfo");
+const videoTitleEl = document.getElementById("videoTitle");
+const timeInputEl  = document.getElementById("timeInput");
 
 const playerIframe = document.createElement("iframe");
 playerIframe.allow = "autoplay";
@@ -356,7 +378,12 @@ function updateTabs(){
     });
 }
 
-
+function timeToSeconds(str){
+    const m = str.match(/^(\d{1,2}):(\d{2})$/);
+    if(!m) return 0;
+    return parseInt(m[1],10)*3600 + parseInt(m[2],10)*60;
+}
+    
 function initTabs(){
     tabsEl.innerHTML = "";
     tabMap.clear();
@@ -494,23 +521,45 @@ function createVideoCard(v){
 }
 
 function loadVideo(v){
-    playerIframe.src = `https://www.youtube.com/embed/${v.id}?playsinline=1&autoplay=1`;
-    videoInfoEl.textContent = `${v.title} — ${v.channel}`;
+    const savedTimes = JSON.parse(
+        localStorage.getItem(storage.time(currentPassword)) || "{}"
+    );
+
+    const savedTime = savedTimes[v.id] || "";
+    timeInputEl.value = savedTime;
+
+    const startSeconds = timeToSeconds(savedTime);
+
+    playerIframe.src =
+        `https://www.youtube.com/embed/${v.id}?playsinline=1&autoplay=1&start=${startSeconds}`;
+
+    videoTitleEl.textContent = `${v.title} — ${v.channel}`;
     state.currentVideoId = v.id;
 
-    if (activeVideoEl) {
-        activeVideoEl.classList.remove("active");
-    }
-    
+    if (activeVideoEl) activeVideoEl.classList.remove("active");
+
     activeVideoEl = document.querySelector(`.video[data-video-id="${v.id}"]`);
-    if (activeVideoEl) {
-        activeVideoEl.classList.add("active");
-    }
+    if (activeVideoEl) activeVideoEl.classList.add("active");
 }
+
+timeInputEl.addEventListener("change", () => {
+    if (!state.currentVideoId) return;
+
+    const allTimes = JSON.parse(
+        localStorage.getItem(storage.time(currentPassword)) || "{}"
+    );
+
+    allTimes[state.currentVideoId] = timeInputEl.value;
+    localStorage.setItem(
+        storage.time(currentPassword),
+        JSON.stringify(allTimes)
+    );
+});
 
 </script>
 </body>
 </html>
+
 
 
 
