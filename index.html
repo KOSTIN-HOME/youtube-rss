@@ -507,15 +507,27 @@ feedEl.addEventListener("scroll", () => {
 });
 
 function createVideoCard(v){
+    const times = JSON.parse(
+        localStorage.getItem(storage.time(currentPassword)) || "{}"
+    );
+
+    const savedTime = times[v.id];
+
     const d = document.createElement("div");
     d.className = "video" + (v.id===state.currentVideoId?" active":"");
     d.dataset.videoId = v.id;
+
     d.innerHTML = `
         <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg">
         <div>
             <div class="title">${v.title}</div>
-            <div class="meta">${v.channel} • ${formatDateTime(v.date)}</div>
-        </div>`;
+            <div class="meta">
+                ${v.channel} • ${formatDateTime(v.date)}
+                ${savedTime ? ` • ⏱ ${savedTime}` : ""}
+            </div>
+        </div>
+    `;
+
     d.onclick = () => loadVideo(v);
     return d;
 }
@@ -562,6 +574,8 @@ timeInputEl.addEventListener("change", () => {
         storage.time(currentPassword),
         JSON.stringify(allTimes)
     );
+
+    renderVideosSorted();
 });
 
 </script>
