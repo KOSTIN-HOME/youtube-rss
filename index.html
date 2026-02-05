@@ -1,119 +1,151 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<head>
+<meta charset="UTF-8">
 <title>KvadTube</title>
 
 <style>
-body{margin:0;background:#000;color:#fff;font-family:sans-serif}
-#setup, #app{padding:12px}
-#app{display:flex;height:100vh;gap:12px}
-textarea,input{background:#111;color:#fff;border:1px solid #333;border-radius:6px;padding:6px}
-button{background:#111;color:#aaa;border:1px solid #333;border-radius:6px;padding:6px 10px}
-#feed{overflow:auto;flex:1}
-.video{display:flex;gap:8px;padding:6px;cursor:pointer}
-.video:hover{background:#222}
-.video.active{background:#444}
-img{width:140px;border-radius:6px}
-iframe{width:100%;height:100%;border:0}
-@media(max-width:800px){#app{flex-direction:column}}
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#111;
+  color:#ddd;
+}
+#setup, #app{padding:10px}
+textarea{
+  width:100%;
+  height:200px;
+  background:#000;
+  color:#ddd;
+  border:1px solid #333;
+}
+button{
+  background:#222;
+  color:#ddd;
+  border:1px solid #333;
+  padding:6px 10px;
+}
+iframe{
+  width:100%;
+  height:50vh;
+  border:none;
+  background:#000;
+}
+#list{
+  margin-top:10px;
+}
+.item{
+  border-bottom:1px solid #222;
+  padding:6px 0;
+}
+.item small{color:#888}
+.item input{
+  width:60px;
+  background:#000;
+  color:#ddd;
+  border:1px solid #333;
+  margin-left:10px;
+}
 </style>
+</head>
 
 <body>
 
 <div id="setup" hidden>
-<textarea id="feeds" placeholder='["https://www.youtube.com/feeds/videos.xml?channel_id=..."]'></textarea>
-<br><button onclick="saveFeeds()">OK</button>
+<textarea id="input"></textarea>
+<button id="save">OK</button>
 </div>
 
 <div id="app" hidden>
-<div style="flex:1.6">
-<div>
-<span id="title">Выберите видео</span>
-<input id="time" placeholder="чч:мм" size="5">
-</div>
-<div style="aspect-ratio:16/9;background:#000;margin-top:6px">
-<iframe id="player" allow="autoplay" allowfullscreen></iframe>
-</div>
-</div>
-<div id="feed"></div>
+<iframe id="player"></iframe>
+<div id="list"></div>
 </div>
 
 <script>
-const S={f:"feeds",v:"videos",t:"time",l:"last"}
+const LS_CHANNELS='channels'
+const LS_VIDEOS='videos'
+const proxies=[
+  u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u=>`https://cors.isomorphic-git.org/${u}`,
+  u=>`https://thingproxy.freeboard.io/fetch/${u}`
+]
+
 const $=id=>document.getElementById(id)
-let vids=[],cur=null
 
-if(!localStorage[S.f])$("setup").hidden=false
-else init()
+let channels=JSON.parse(localStorage.getItem(LS_CHANNELS)||'null')
+let videos=JSON.parse(localStorage.getItem(LS_VIDEOS)||'[]')
 
-function saveFeeds(){
-  localStorage[S.f]=$("feeds").value
-  $("setup").remove()
-  init()
-}
-
-function init(){
-  $("app").hidden=false
-  vids=JSON.parse(localStorage[S.v]||"[]").map(v=>(v.date=new Date(v.date),v))
-  load()
-}
-
-async function load(){
-  const feeds=JSON.parse(localStorage[S.f])
-  for(const u of feeds){
-    try{
-      const r=await fetch("https://api.allorigins.win/raw?url="+encodeURIComponent(u))
-      parse(await r.text())
-    }catch{}
+if(!channels){
+  $('setup').hidden=false
+  $('save').onclick=()=>{
+    channels=JSON.parse($('input').value)
+    localStorage.setItem(LS_CHANNELS,JSON.stringify(channels))
+    start()
   }
-  localStorage[S.v]=JSON.stringify(vids)
+}else start()
+
+function start(){
+  $('setup').hidden=true
+  $('app').hidden=false
   render()
+  fetchAll()
+  setInterval(fetchAll,30*60*1000)
 }
 
-function parse(x){
-  const xml=new DOMParser().parseFromString(x,"text/xml")
-  xml.querySelectorAll("entry").forEach(e=>{
-    const id=e.querySelector("yt\\:videoId")?.textContent
-    if(!id||vids.find(v=>v.id==id))return
-    vids.push({id,title:e.querySelector("title")?.textContent||"",
-      date:new Date(e.querySelector("published")?.textContent)})
-  })
+async function fetchFeed(url){
+  return Promise.any(
+    proxies.map(p=>fetch(p(url)).then(r=>r.text()))
+  )
+}
+
+async function fetchAll(){
+  let added=false
+  for(const ch of channels){
+    const xml=await fetchFeed(ch.url)
+    const doc=new DOMParser().parseFromString(xml,'text/xml')
+    doc.querySelectorAll('entry').forEach(e=>{
+      const id=e.querySelector('yt\\:videoId')?.textContent
+      if(!id||videos.find(v=>v.id===id)) return
+      videos.push({
+        id,
+        title:e.querySelector('title').textContent,
+        channel:ch.name,
+        date:new Date(e.querySelector('published').textContent).getTime(),
+        note:''
+      })
+      added=true
+    })
+  }
+  if(added){
+    videos.sort((a,b)=>b.date-a.date)
+    localStorage.setItem(LS_VIDEOS,JSON.stringify(videos))
+    render()
+  }
 }
 
 function render(){
-  $("feed").innerHTML=""
-  vids.sort((a,b)=>b.date-a.date).forEach(v=>{
-    const d=document.createElement("div")
-    d.className="video"+(v.id==cur?" active":"")
-    d.innerHTML=`<img src=https://i.ytimg.com/vi/${v.id}/hqdefault.jpg>
-    <div><div>${v.title}</div><small>${v.date.toLocaleString("ru-RU")}</small></div>`
-    d.onclick=_=>play(v)
-    $("feed").appendChild(d)
+  if(videos[0]) $('player').src=`https://www.youtube.com/embed/${videos[0].id}`
+  $('list').innerHTML=''
+  videos.forEach(v=>{
+    const d=new Date(v.date)
+    const el=document.createElement('div')
+    el.className='item'
+    el.innerHTML=`
+      <div>
+        <b>${v.title}</b>
+        <small> — ${v.channel} — ${d.toLocaleString().slice(0,-3)}</small>
+        <input maxlength="5" value="${v.note}">
+      </div>
+    `
+    el.onclick=()=>$('player').src=`https://www.youtube.com/embed/${v.id}`
+    el.querySelector('input').oninput=e=>{
+      v.note=e.target.value
+      localStorage.setItem(LS_VIDEOS,JSON.stringify(videos))
+    }
+    $('list').appendChild(el)
   })
 }
-
-function play(v){
-  cur=v.id
-  $("title").textContent=v.title
-  const t=JSON.parse(localStorage[S.t]||"{}")[v.id]||""
-  $("time").value=t
-  $("player").src=`https://www.youtube.com/embed/${v.id}?autoplay=1&start=${sec(t)}`
-  localStorage[S.l]=v.id
-  render()
-}
-
-function sec(t){
-  const m=t.match(/(\d+):(\d+)/)
-  return m?m[1]*3600+m[2]*60:0
-}
-
-$("time").onchange=_=>{
-  if(!cur)return
-  const o=JSON.parse(localStorage[S.t]||"{}")
-  o[cur]=$("time").value
-  localStorage[S.t]=JSON.stringify(o)
-}
 </script>
+
 </body>
 </html>
