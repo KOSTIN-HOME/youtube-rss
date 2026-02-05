@@ -93,10 +93,15 @@ function start(){
 }
 
 async function fetchFeed(url){
-  return Promise.any(
-    proxies.map(p=>fetch(p(url)).then(r=>r.text()))
-  )
+  for(const p of proxies){
+    try{
+      const t = await fetch(p(url)).then(r=>r.text())
+      if(t.includes('<entry>')) return t
+    }catch{}
+  }
+  throw 'RSS not loaded'
 }
+
 
 async function fetchAll(){
   let added=false
@@ -149,3 +154,4 @@ function render(){
 
 </body>
 </html>
+
