@@ -133,11 +133,6 @@ input, textarea, .input {
 
 <div id="lockScreen">
     <div class="box">
-        <label for="passwordInput">Пароль</label>
-        <div class="row">
-            <input id="passwordInput" type="password">
-            <button id="loginBtn">Войти</button>
-        </div>
 
         <label for="feedsInput">Каналы</label>
         <textarea id="feedsInput" rows="5" spellcheck="false"
@@ -172,25 +167,32 @@ input, textarea, .input {
 const $ = id => document.getElementById(id);
     
 const lockScreen    = $("lockScreen");
-const passwordInput = $("passwordInput");
-const loginBtn  = $("loginBtn");
 const saveBtn   = $("saveBtn");
 const deleteBtn = $("deleteBtn");
 const feedsInput = $("feedsInput");
 const lockMsg    = $("lockMsg");
 
 const storage = {
-    feeds:  pass => `ytFeeds_${pass}`,
-    videos: pass => `ytVideos_${pass}`,
-    time:   pass => `ytTime_${pass}`,   // ← ВОТ СЮДА
+    feeds:  "ytFeeds",
+    videos: "ytVideos",
+    time:   "ytTime",
     last:   "ytLastVideo"
 };
-
     
-window.addEventListener("load", () => passwordInput.focus());
+window.addEventListener("load", () => {
+    const savedFeeds = localStorage.getItem(storage.feeds);
+
+    if (savedFeeds) {
+        feeds = JSON.parse(savedFeeds);
+        lockScreen.style.display = "none";
+        init();
+    } else {
+        lockScreen.style.display = "flex";
+    }
+});
+
 
 let feeds = [];
-let currentPassword = "";
 let activeVideoEl = null;
 
 function parseFeedsInput(text){
@@ -205,41 +207,26 @@ function parseFeedsInput(text){
 
 const actions = {
 
-    login(){
-        const pass = passwordInput.value;
-        const saved = localStorage.getItem(storage.feeds(pass));
-
-        if(!saved)
-            return lockMsg.textContent = "Каналы для этого пароля не найдены";
-
-        feeds = JSON.parse(saved);
-        currentPassword = pass;
+    save(){
+        const parsed = parseFeedsInput(feedsInput.value);
+    
+        if(!Array.isArray(parsed))
+            return lockMsg.textContent = "Ошибка формата feeds";
+    
+        localStorage.setItem(storage.feeds, JSON.stringify(parsed));
+        feeds = parsed;
+    
         lockScreen.style.display = "none";
         init();
     },
 
-    save(){
-        const pass = passwordInput.value;
-        const parsed = parseFeedsInput(feedsInput.value);
-
-        if(!Array.isArray(parsed))
-            return lockMsg.textContent = "Ошибка формата feeds";
-
-        localStorage.setItem(storage.feeds(pass), JSON.stringify(parsed));
-        feedsInput.value = "";
-        lockMsg.textContent = "Каналы сохранены";
-    },
-
     delete(){
-        const pass = passwordInput.value;
-        localStorage.removeItem(storage.feeds(pass));
-        localStorage.removeItem(storage.videos(pass));
-        localStorage.removeItem(storage.last);
-        lockMsg.textContent = "Каналы и кэш удалены";
+        localStorage.clear();
+        location.reload();
     }
+
 };
 
-loginBtn.onclick  = actions.login;
 saveBtn.onclick   = actions.save;
 deleteBtn.onclick = actions.delete;
 
@@ -303,13 +290,12 @@ let cachedSortedVideos = [];
 let cacheDirty = true;
     
 function init(){
-    if(!currentPassword) return;
 
     channelOrder = new Map(feeds.map((f, i) => [f.name, i]));
 
     videoMap.clear();
 
-    const saved = JSON.parse(localStorage.getItem(storage.videos(currentPassword)) || "[]");
+    const saved = JSON.parse(localStorage.getItem(storage.videos) || "[]");
 
     saved.forEach(v => {
         const d = new Date(v.date);
@@ -453,8 +439,7 @@ function parseFeed(text,channel){
         channelVideos.push(video);
     });
     
-    if(!currentPassword) return;
-    const saved = JSON.parse(localStorage.getItem(storage.videos(currentPassword)) || "[]");
+    const saved = JSON.parse(localStorage.getItem(storage.videos) || "[]");
     const otherVideos = saved.filter(v => v.channel !== channel);
     channelVideos.sort((a,b) => b.date - a.date);
 
@@ -468,7 +453,7 @@ function parseFeed(text,channel){
     channelVideos.forEach(v => merged.set(v.id, v));
     
     localStorage.setItem(
-        storage.videos(currentPassword),
+        storage.videos,
         JSON.stringify([...merged.values()])
     );
 
@@ -515,7 +500,7 @@ feedEl.addEventListener("scroll", () => {
 
 function createVideoCard(v){
     const times = JSON.parse(
-        localStorage.getItem(storage.time(currentPassword)) || "{}"
+        localStorage.getItem(storage.time) || "{}"
     );
 
     const savedTime = times[v.id];
@@ -552,7 +537,7 @@ function loadVideo(v){
     localStorage.setItem(storage.last, v.id);
     
     const savedTimes = JSON.parse(
-        localStorage.getItem(storage.time(currentPassword)) || "{}"
+        localStorage.getItem(storage.time) || "{}"
     );
 
     const savedTime = savedTimes[v.id] || "";
@@ -576,12 +561,12 @@ timeInputEl.addEventListener("change", () => {
     if (!state.currentVideoId) return;
 
     const allTimes = JSON.parse(
-        localStorage.getItem(storage.time(currentPassword)) || "{}"
+        localStorage.getItem(storage.time) || "{}"
     );
 
     allTimes[state.currentVideoId] = timeInputEl.value;
     localStorage.setItem(
-        storage.time(currentPassword),
+        storage.time,
         JSON.stringify(allTimes)
     );
 
@@ -603,3 +588,4 @@ timeInputEl.addEventListener("input", e => {
 </script>
 </body>
 </html>
+
